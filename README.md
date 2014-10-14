@@ -33,3 +33,7 @@ or from the commandline
 ```
 nodets index.ts
 ```
+
+Legal
+-----
+node-typeinclude is licensed under [Apache License V2](LICENSE.md)
