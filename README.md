@@ -1,6 +1,6 @@
 node-typeinclude
 ----------------
-node-typeinclude makes it easy to include typescript files into your nodejs project.
+node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something.
 
 class loading
 -------------
