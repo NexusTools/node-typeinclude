@@ -1,4 +1,4 @@
 #!/usr/bin/env node
 
 var typeinclude = require("typeinclude");
-typeinclude.boot(process.argv.shift());
+typeinclude(process.argv.shift());
