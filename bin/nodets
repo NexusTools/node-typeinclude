@@ -1,4 +1,6 @@
 #!/usr/bin/env node
 
+process.argv.splice(1, 1); // Remove nodets script from arguments
+
 var typeinclude = require("typeinclude");
-typeinclude(process.argv.shift());
+typeinclude(process.argv[1]);
