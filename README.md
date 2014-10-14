@@ -1,6 +1,12 @@
+[![Build Status](https://travis-ci.org/NexusTools/node-typeinclude.svg)](https://travis-ci.org/NexusTools/node-typeinclude) [![Apache License 2.0](http://img.shields.io/hexpm/l/plug.svg)](https://coveralls.io/r/NexusTools/node-typeinclude) [![Coverage Status](https://img.shields.io/coveralls/NexusTools/node-typeinclude.svg)](https://coveralls.io/r/NexusTools/node-typeinclude) [![Gratipay Tips](http://img.shields.io/gratipay/ktaeyln.svg)](https://gratipay.com/ktaeyln/)
+
 node-typeinclude
 ----------------
 node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something.
+
+```
+npm install -g typeinclude
+```
 
 class loading
 -------------
@@ -36,4 +42,4 @@ nodets index.ts
 
 legal
 -----
-node-typeinclude is licensed under [Apache License V2](LICENSE.md)
+node-typeinclude is licensed under [Apache License 2.0](LICENSE.md)
