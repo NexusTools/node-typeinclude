@@ -6,22 +6,30 @@ class loading
 -------------
 node-typeinclude allows you @import typescript classes from the top of typescript files
 
-``@include SomeClass;
+```
+@include SomeClass;
 
 var instance = new SomeClass();
-instance.doSomething()``
+instance.doSomething();
+```
 
 usage
 -----
-``var typeinclude = require("typeinclude");
+```
+var typeinclude = require("typeinclude");
 var myTypeScriptClass = typeinclude("./myTypeScriptClass.ts");
-myTypeScriptClass.someMethod();``
+myTypeScriptClass.someMethod();
+```
 
 or boot a typescript
 
-``var typeinclude = require("typeinclude");
-typeinclude.boot("index.ts");``
+```
+var typeinclude = require("typeinclude");
+typeinclude.boot("index.ts");
+```
 
 or from the commandline
 
-``nodets index.ts``
+```
+nodets index.ts
+```
