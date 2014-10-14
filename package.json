@@ -1,0 +1,40 @@
+{
+	"name": "node-typeinclude",
+	"author": "NexusTools",
+	"homepage": "https://www.nexustools.net/projects#typeinclude",
+	"version": "0.1.0",
+	"licenses": [
+		{
+			"type": "Apache License 2.0", 
+			"url": "https://github.com/NexusTools/node-typeinclude/blob/master/LICENSE.md"
+		}
+	],
+	"description": "",
+	"keywords": [
+		"TypeScript", 
+		"NexusTools",
+		"integration", 
+		"nosejs", 
+		"compiler", 
+		"language", 
+		"javascript"
+	],
+	"bugs": {
+		"url" : "https://github.com/NexusTools/node-typeinclude/issues"
+	},
+	"repository" : { 
+		"type" : "git",	
+		"url" : "https://github.com/NexusTools/node-typeinclude.git"  
+	},
+	"preferGlobal" : true,
+	"main" : "./bin/nodets.js",
+	"bin" : { 
+		"nodets" : "./bin/nodets" 
+	},
+	"engines" : { 
+		"node" : ">=0.8.0" 
+	},
+	"devDependencies": {
+		"typescript" : "latest"
+	}
+}

@@ -1,0 +1,26 @@
+node-typeinclude
+----------------
+node-typeinclude makes it easy to include typescript files into your nodejs project.
+
+class loading
+-------------
+node-typeinclude allows you @import typescript classes from the top of typescript files
+
+``@include SomeClass;
+
+var instance = new SomeClass();
+instance.doSomething()``
+
+usage
+-----
+``var typeinclude = require("typeinclude");
+var myTypeScriptClass = typeinclude("./myTypeScriptClass.ts");
+myTypeScriptClass.someMethod();``
+
+or boot a typescript
+
+``boottypescript("index.ts");``
+
+or from the commandline
+
+``nodets index.ts``
