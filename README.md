@@ -25,7 +25,7 @@ or boot a typescript
 
 ```
 var typeinclude = require("typeinclude");
-typeinclude.boot("index.ts");
+typeinclude("index.ts");
 ```
 
 or from the commandline

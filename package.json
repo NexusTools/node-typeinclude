@@ -27,7 +27,7 @@
 		"url" : "https://github.com/NexusTools/node-typeinclude.git"  
 	},
 	"preferGlobal" : true,
-	"main" : "./bin/nodets.js",
+	"main" : "index",
 	"bin" : { 
 		"nodets" : "./bin/nodets" 
 	},
@@ -35,6 +35,8 @@
 		"node" : ">=0.8.0" 
 	},
 	"devDependencies": {
-		"typescript" : "latest"
+		"sleep": "latest",
+		"typescript" : "latest",
+		"string.prototype.startswith": "latest"
 	}
 }
