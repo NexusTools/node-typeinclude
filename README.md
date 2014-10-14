@@ -4,7 +4,7 @@ node-typeinclude makes it easy to include typescript files into your nodejs proj
 
 class loading
 -------------
-node-typeinclude allows you @import typescript classes from the top of typescript files
+node-typeinclude allows you @include typescript classes from the top of typescript files
 
 ```
 @include SomeClass;
