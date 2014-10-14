@@ -1,4 +1,5 @@
 require('string.prototype.startswith');
+require('string.prototype.endswith');
 
 var child_process = require("child_process");
 var crypto = require('crypto');
@@ -6,6 +7,8 @@ var sleep = require('sleep');
 var path = require('path');
 var fs = require('fs');
 var os = require('os');
+
+var includereg = /^@include (\w+)$/gm;
 
 process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE = process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid();
 var scriptDirectory = path.dirname(process.argv[1]);
@@ -35,16 +38,9 @@ if(!("execSync" in child_process)) {
 }
 
 var typeinclude = function(script) {
-	if(script.startsWith("../") || script.startsWith(".." + path.sep)) {
-		var baseDirectory = scriptDirectory;
-		do {
-			baseDirectory = path.dirname(baseDirectory);
-			script = script.substring(3);
-		} while(script.startsWith("../") || script.startsWith(".." + path.sep));
-		script = baseDirectory + path.sep + script;
-	} else if(script.startsWith("./") || script.startsWith("." + path.sep)) {
-		script = scriptDirectory + script.substring(1);
-	}
+	script = path.resolve(scriptDirectory, script);
+	if(!script.endsWith(".ts"))
+		script += ".ts";
 	
 	try {
 		fs.mkdirSync(baseTempDirectory);
@@ -83,6 +79,19 @@ var typeinclude = function(script) {
 		if(scriptStat.mtime > outStat.mtime)
 			throw "Script modified since last compiled";
 	} catch(e) {
+		var modified = false;
+		// TODO: Make this read part by part, not load the entire thing into memory
+		var content = fs.readFileSync(script, {encoding: "utf8"});
+		var pos, end;
+
+		if(content.match(includereg)) {
+			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
+			content = content.replace(includereg, "var $1 = _typeinclude(\"$1\")");
+			script = outputFile + "." + path.basename(script);
+			fs.writeFileSync(script, content);		
+			console.log(content);
+		}
+
 		// TODO: Change this to use .spawnSync instead
 		child_process.execSync("tsc -out \"" + outputFile + "\" \"" + script + "\"", outputFile + ".log");
 		try {

@@ -37,6 +37,7 @@
 	"devDependencies": {
 		"sleep": "latest",
 		"typescript" : "latest",
+		"string.prototype.endswith": "latest",
 		"string.prototype.startswith": "latest"
 	}
 }
