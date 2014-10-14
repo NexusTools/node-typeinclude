@@ -19,7 +19,8 @@ myTypeScriptClass.someMethod();``
 
 or boot a typescript
 
-``boottypescript("index.ts");``
+``var typeinclude = require("typeinclude");
+typeinclude.boot("index.ts");``
 
 or from the commandline
 
