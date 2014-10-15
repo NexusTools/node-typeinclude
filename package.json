@@ -2,14 +2,14 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"licenses": [
 		{
 			"type": "Apache License 2.0", 
 			"url": "https://github.com/NexusTools/node-typeinclude/blob/master/LICENSE.md"
 		}
 	],
-	"description": "node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something.",
+	"description": "node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something. And provides a few extensions to the TypeScript language via a pre-processor.",
 	"keywords": [
 		"TypeScript", 
 		"NexusTools",
@@ -35,9 +35,9 @@
 		"node" : ">=0.8.0" 
 	},
 	"dependencies": {
-		"sleep": "latest",
 		"typescript" : "latest",
 		"string.prototype.endswith": "latest",
-		"string.prototype.startswith": "latest"
+		"string.prototype.startswith": "latest",
+		"spawn-sync": "latest"
 	}
 }

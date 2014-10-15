@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/NexusTools/node-typeinclude.svg)](https://travis-ci.org/NexusTools/node-typeinclude) [![Apache License 2.0](http://img.shields.io/hexpm/l/plug.svg)](https://coveralls.io/r/NexusTools/node-typeinclude) [![Coverage Status](https://img.shields.io/coveralls/NexusTools/node-typeinclude.svg)](https://coveralls.io/r/NexusTools/node-typeinclude) [![Gratipay Tips](http://img.shields.io/gratipay/ktaeyln.svg)](https://gratipay.com/ktaeyln/)
+[![Package Version](https://img.shields.io/npm/v/typeinclude.svg)](https://www.npmjs.org/package/typeinclude) [![Build Status](https://travis-ci.org/NexusTools/node-typeinclude.svg)](https://travis-ci.org/NexusTools/node-typeinclude) [![Apache License 2.0](http://img.shields.io/hexpm/l/plug.svg)](http://www.apache.org/licenses/LICENSE-2.0.html) [![Coverage Status](https://img.shields.io/coveralls/NexusTools/node-typeinclude.svg)](https://coveralls.io/r/NexusTools/node-typeinclude) [![Gratipay Tips](http://img.shields.io/gratipay/ktaeyln.svg)](https://gratipay.com/ktaeyln/)
 
 node-typeinclude
 ----------------

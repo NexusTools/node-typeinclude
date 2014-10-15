@@ -1,9 +1,10 @@
 require('string.prototype.startswith');
 require('string.prototype.endswith');
 
+var spawnSync = require('child_process').spawnSync
+							|| require('spawn-sync');
 var child_process = require("child_process");
 var crypto = require('crypto');
-var sleep = require('sleep');
 var path = require('path');
 var fs = require('fs');
 var os = require('os');
@@ -16,26 +17,6 @@ var scriptTempDirectory = os.tmpdir();
 scriptTempDirectory += path.sep + "typeinclude-cache" + path.sep;
 var baseTempDirectory = scriptTempDirectory;
 scriptTempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
-
-if(!("execSync" in child_process)) {
-	child_process.execSync = function(command, output) {
-		var doneFile = scriptTempDirectory + "_tsi.done";
-		try {
-			fs.unlinkSync(doneFile);
-		} catch(e) {}
-		var cmdline = command + " ";
-		if(output)
-			cmdline += "2>&1 > \"" + output + "\" ";
-		cmdline += "|| true; touch " + doneFile;
-		child_process.exec(cmdline);
-		console.log(cmdline);
-		
-		while (!fs.existsSync(doneFile)) {
-			sleep.sleep(1);
-		}
-		fs.unlinkSync(doneFile);
-	}
-}
 
 var typeinclude = function(script) {
 	script = path.resolve(scriptDirectory, script);
@@ -89,6 +70,10 @@ var typeinclude = function(script) {
 		if(scriptStat.mtime > outStat.mtime)
 			throw "Script modified since last compiled";
 	} catch(e) {
+		var outputLog = outputBase + ".log";
+		fs.unlinkSync(outputFile);
+		fs.unlinkSync(outputLog);
+	
 		var modified = false;
 		// TODO: Make this read part by part, not load the entire thing into memory
 		var content = fs.readFileSync(script, {encoding: "utf8"});
@@ -104,11 +89,16 @@ var typeinclude = function(script) {
 		fs.writeFileSync(script, content);
 
 		// TODO: Change this to use .spawnSync instead
-		child_process.execSync("tsc -module \"commonjs\" -out \"" + outputFile + "\" \"" + script + "\"", outputBase + ".log");
+		var result = spawnSync("tsc", ["-module", "commonjs", "-out", outputFile, script], {
+			stdio: ["ignore", fs.openSync(outputLog, 'a'), fs.openSync(outputLog, 'a')]
+				});
+		
 		try {
+			if(result.error)
+				throw result.error;
 			fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
 		} catch(e) {
-			throw "Failed to compile: " + script + "\nCheck " + outputFile + ".log for details";
+			throw "Failed to compile: " + script + "\nCheck " + outputLog + " for details";
 		}
 	}
 	
