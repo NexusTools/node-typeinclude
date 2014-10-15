@@ -56,7 +56,9 @@ tempDirectory += path.sep + "typeinclude-cache" + path.sep;
 var baseTempDirectory = tempDirectory;
 tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
-var typeinclude = function(script, basepath) {
+global.__typeinclude__loadcache__ = {};
+
+var typeinclude = function(script, basepath, ignoreCaches) {
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Compiling", script, "from", basepath);
 	script = path.resolve(basepath, script);
@@ -64,6 +66,8 @@ var typeinclude = function(script, basepath) {
 	basepath = basepath || scriptBaseDirectory;
 	if(!script.endsWith(".ts"))
 		script += ".ts";
+	if(!ignoreCaches && script in global.__typeinclude__loadcache__)
+		return global.__typeinclude__loadcache__[script];
 	var realScriptPath = script;
 	
 	try {
@@ -126,7 +130,7 @@ var typeinclude = function(script, basepath) {
 		var content = fs.readFileSync(script, {encoding: "utf8"});
 		if(content.match(includereg)) {
 			needRequire = true;
-			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
+			content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
 			content = content.replace(includereg, function(match, p1, offset, string) {
 				p1 = splitArg(cleanArg(p1));
 				return "\n/// <reference path=\"" + p1[1] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\", \"" + basepath + "\")";
@@ -183,7 +187,10 @@ var typeinclude = function(script, basepath) {
 		}
 	}
 	
-	return require(outputFile);
+	var requireInstance = require(outputFile);
+	if(!ignoreCaches)
+		global.__typeinclude__loadcache__[realScriptPath] = requireInstance;
+	return requireInstance;
 }
 
 module.exports = typeinclude;
