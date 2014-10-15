@@ -1,7 +1,7 @@
 require('string.prototype.startswith');
 require('string.prototype.endswith');
 
-var sleep = require("sleep").sleep;
+var usleep = require("sleep").usleep;
 var child_process = require("child_process");
 var crypto = require('crypto');
 var path = require('path');
@@ -21,7 +21,7 @@ if(!("spawnSync" in child_process)) {
 			console.log(cmdline);
 		
 		while (!fs.existsSync(doneFile)) {
-			sleep(1);
+			usleep(100000);
 		}
 		fs.unlinkSync(doneFile);
 		
