@@ -44,7 +44,7 @@
 		"string.prototype.startswith": "latest",
 		"sleep": "latest"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"istanbul": "0.3.2",
     	"mocha": "~1.21.4"
 	}
