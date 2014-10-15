@@ -122,7 +122,7 @@ var typeinclude = function(script, basepath) {
 		var pos, end;
 
 		if(content.match(includereg)) {
-			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
+			content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
 			content = content.replace(includereg, function(match, p1, offset, string) {
 				p1 = splitArg(cleanArg(p1));
 				return "var " + p1[0] + " = _typeinclude(\"" + p1[1] + "\", \"" + scriptBaseDirectory + "\")";
