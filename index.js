@@ -17,19 +17,22 @@ if(!("spawnSync" in child_process)) {
 		// TODO: Improve concatenation, this is hacky...
 		var cmdline = command + " \"" + args.join("\" \"") + "\" || true; touch " + doneFile;
 		child_process.spawn('sh', ['-c', cmdline], opts);
-		console.log(cmdline);
+		if(process.env.TYPEINCLUDE_VERBOSE)
+			console.log(cmdline);
 		
 		while (!fs.existsSync(doneFile)) {
 			sleep(1);
 		}
 		fs.unlinkSync(doneFile);
 		
-		return {}; // Fake it because I don't think we can make it...
+		return {}; // Fake it because I don't think we can make it... without native code...
 	}
 }
 
 var nodereqreg = /^@nodereq (\w+|.+\:\w+)$/gm;
 var includereg = /^@include (\w+|.+\:\w+)$/gm;
+var referencereg = /^@reference ([\w\.\-\/]+)$/gm;
+var mainreg = /^@main (\w+)$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 
 function cleanArg(arg) {
@@ -54,9 +57,11 @@ var baseTempDirectory = tempDirectory;
 tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
 var typeinclude = function(script, basepath) {
-	basepath = basepath || processDirectory;
+	if(process.env.TYPEINCLUDE_VERBOSE)
+		console.log("Compiling", script, "from", basepath);
 	script = path.resolve(basepath, script);
 	var scriptBaseDirectory = path.dirname(script);
+	basepath = basepath || scriptBaseDirectory;
 	if(!script.endsWith(".ts"))
 		script += ".ts";
 	var realScriptPath = script;
@@ -116,27 +121,40 @@ var typeinclude = function(script, basepath) {
 			fs.unlinkSync(outputLog);
 		} catch(e) {}
 	
-		var modified = false;
+		var needRequire = false;
 		// TODO: Make this read part by part, not load the entire thing into memory
 		var content = fs.readFileSync(script, {encoding: "utf8"});
-		var pos, end;
-
 		if(content.match(includereg)) {
-			content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
+			needRequire = true;
+			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
 			content = content.replace(includereg, function(match, p1, offset, string) {
 				p1 = splitArg(cleanArg(p1));
-				return "var " + p1[0] + " = _typeinclude(\"" + p1[1] + "\", \"" + scriptBaseDirectory + "\")";
+				return "\n/// <reference path=\"" + p1[1] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\", \"" + basepath + "\")";
+			});
+		}
+		if(content.match(referencereg)) {
+			content = content.replace(referencereg, function(match, p1, offset, string) {
+				p1 = cleanArg(p1);
+				if(!p1.endsWith(".ts"))
+					p1 += ".ts";
+				return "/// <reference path=\"" + p1 + "\" />";
 			});
 		}
 		if(content.match(nodereqreg)) {
-			content = "declare var require:Function;\n" + content;
+			needRequire = true;
 			content = content.replace(nodereqreg, function(match, p1, offset, string) {
 				p1 = splitArg(cleanArg(p1));
 				return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
 			});
 		}
-		content = "var __filename = \"" + realScriptPath + "\"\n" + content;
-		content = "var __dirname = \"" + scriptBaseDirectory + "\"\n" + content;
+		if(content.match(mainreg)) {
+			content = content.replace(mainreg, function(match, p1, offset, string) {
+				return "module.exports = " + p1 + ";";
+			});
+		}
+		if(needRequire)
+			content = "declare var require:Function;\n" + content;
+		content = "var __filename = \"" + realScriptPath + "\"\nvar __dirname = \"" + scriptBaseDirectory + "\"\n" + content;
 		
 		script = outputBase + ".ts";
 		fs.writeFileSync(script, content);
