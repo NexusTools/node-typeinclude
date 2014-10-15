@@ -21,7 +21,7 @@ if(!("spawnSync" in child_process)) {
 			console.log(cmdline);
 		
 		while (!fs.existsSync(doneFile)) {
-			usleep(100000);
+			usleep(100000); // 100ms
 		}
 		fs.unlinkSync(doneFile);
 		
