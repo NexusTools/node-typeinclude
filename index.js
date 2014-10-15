@@ -71,7 +71,17 @@ var typeinclude = function(script) {
 		if(e.code != "EEXIST")
 			throw e;
 	}
-	outputFile += hashDigest.substring(80) + ".js";
+	outputFile += hashDigest.substring(80) + path.sep;
+	try {
+		fs.mkdirSync(outputFile, 0755);
+	} catch(e) {
+		if(e.code != "EEXIST")
+			throw e;
+	}
+	var outputFolder = outputFile;
+	outputFile += path.basename(script, '.ts');
+	var outputBase = outputFile;
+	outputFile += ".js";
 	
 	var scriptStat = fs.statSync(script);
 	try {
@@ -87,13 +97,14 @@ var typeinclude = function(script) {
 		if(content.match(includereg)) {
 			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
 			content = content.replace(includereg, "var $1 = _typeinclude(\"$1\")");
-			script = outputFile + "." + path.basename(script);
-			fs.writeFileSync(script, content);		
 			console.log(content);
 		}
+		
+		script = outputBase + ".ts";
+		fs.writeFileSync(script, content);
 
 		// TODO: Change this to use .spawnSync instead
-		child_process.execSync("tsc -module \"commonjs\" -out \"" + outputFile + "\" \"" + script + "\"", outputFile + ".log");
+		child_process.execSync("tsc -module \"commonjs\" -out \"" + outputFile + "\" \"" + script + "\"", outputBase + ".log");
 		try {
 			fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
 		} catch(e) {
