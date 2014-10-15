@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"licenses": [
 		{
 			"type": "Apache License 2.0", 
@@ -28,6 +28,10 @@
 	},
 	"preferGlobal" : true,
 	"main" : "index",
+	"scripts": {
+		"test": "mocha --ui tdd --require test/support/env --reporter spec --check-leaks test/",
+		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --require test/support/env --ui tdd --reporter spec --check-leaks test/"
+	},
 	"bin" : { 
 		"nodets" : "./bin/nodets" 
 	},
@@ -38,6 +42,10 @@
 		"typescript" : "latest",
 		"string.prototype.endswith": "latest",
 		"string.prototype.startswith": "latest",
-		"spawn-sync": "latest"
+		"sleep": "latest"
+	},
+	"dependencies": {
+		"istanbul": "0.3.2",
+    	"mocha": "~1.21.4"
 	}
 }

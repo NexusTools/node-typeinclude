@@ -1,27 +1,65 @@
 require('string.prototype.startswith');
 require('string.prototype.endswith');
 
-var spawnSync = require('child_process').spawnSync
-							|| require('spawn-sync');
+var sleep = require("sleep").sleep;
 var child_process = require("child_process");
 var crypto = require('crypto');
 var path = require('path');
 var fs = require('fs');
 var os = require('os');
 
-var includereg = /^@include (\w+)$/gm;
+if(!("spawnSync" in child_process)) {
+	child_process.spawnSync = function(command, args, opts) {
+		var doneFile = tempDirectory + "_tsc.done";
+		try {
+			fs.unlinkSync(doneFile);
+		} catch(e) {}
+		// TODO: Improve concatenation, this is hacky...
+		var cmdline = command + " \"" + args.join("\" \"") + "\" || true; touch " + doneFile;
+		child_process.spawn('sh', ['-c', cmdline], opts);
+		console.log(cmdline);
+		
+		while (!fs.existsSync(doneFile)) {
+			sleep(1);
+		}
+		fs.unlinkSync(doneFile);
+		
+		return {}; // Fake it because I don't think we can make it...
+	}
+}
 
+var nodereqreg = /^@nodereq (\w+|.+\:\w+)$/gm;
+var includereg = /^@include (\w+|.+\:\w+)$/gm;
+var specificreg = /^(.+)\:(\w+)$/;
+
+function cleanArg(arg) {
+	if(/^["'].+["']$/.test(arg)) // Strip quotes
+		return arg.substring(1, arg.length-1);
+	return arg;
+}
+
+function splitArg(raw) {
+	var specificMatch = raw.match(specificreg);
+	if(specificMatch) {// Allows lib:varname syntax
+		return [specificMatch[2], specificMatch[1]];
+	}
+	return [raw.replace(/\W/g, "_"), raw];
+}
+
+var processDirectory = path.dirname(process.argv[1]);
 process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE = process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid();
-var scriptDirectory = path.dirname(process.argv[1]);
-var scriptTempDirectory = os.tmpdir();
-scriptTempDirectory += path.sep + "typeinclude-cache" + path.sep;
-var baseTempDirectory = scriptTempDirectory;
-scriptTempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
+var tempDirectory = os.tmpdir();
+tempDirectory += path.sep + "typeinclude-cache" + path.sep;
+var baseTempDirectory = tempDirectory;
+tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
-var typeinclude = function(script) {
-	script = path.resolve(scriptDirectory, script);
+var typeinclude = function(script, basepath) {
+	basepath = basepath || processDirectory;
+	script = path.resolve(basepath, script);
+	var scriptBaseDirectory = path.dirname(script);
 	if(!script.endsWith(".ts"))
 		script += ".ts";
+	var realScriptPath = script;
 	
 	try {
 		fs.mkdirSync(baseTempDirectory);
@@ -30,7 +68,7 @@ var typeinclude = function(script) {
 			throw e;
 	}
 	try {
-		fs.mkdirSync(scriptTempDirectory, 0755);
+		fs.mkdirSync(tempDirectory, 0755);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
@@ -38,7 +76,7 @@ var typeinclude = function(script) {
 	var shasum = crypto.createHash('sha512');
 	shasum.update(script);
 	var hashDigest = shasum.digest("hex");
-	var outputFile = scriptTempDirectory + hashDigest.substring(0, 12) + path.sep;
+	var outputFile = tempDirectory + hashDigest.substring(0, 12) + path.sep;
 	try {
 		fs.mkdirSync(outputFile, 0755);
 	} catch(e) {
@@ -71,8 +109,12 @@ var typeinclude = function(script) {
 			throw "Script modified since last compiled";
 	} catch(e) {
 		var outputLog = outputBase + ".log";
-		fs.unlinkSync(outputFile);
-		fs.unlinkSync(outputLog);
+		try {
+			fs.unlinkSync(outputFile);
+		} catch(e) {}
+		try {
+			fs.unlinkSync(outputLog);
+		} catch(e) {}
 	
 		var modified = false;
 		// TODO: Make this read part by part, not load the entire thing into memory
@@ -81,23 +123,44 @@ var typeinclude = function(script) {
 
 		if(content.match(includereg)) {
 			content = "var _typeinclude = require(\"typeinclude\");\n" + content;
-			content = content.replace(includereg, "var $1 = _typeinclude(\"$1\")");
-			console.log(content);
+			content = content.replace(includereg, function(match, p1, offset, string) {
+				p1 = splitArg(cleanArg(p1));
+				return "var " + p1[0] + " = _typeinclude(\"" + p1[1] + "\", \"" + scriptBaseDirectory + "\")";
+			});
 		}
+		if(content.match(nodereqreg)) {
+			content = "declare var require:Function;\n" + content;
+			content = content.replace(nodereqreg, function(match, p1, offset, string) {
+				p1 = splitArg(cleanArg(p1));
+				return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
+			});
+		}
+		content = "var __filename = \"" + realScriptPath + "\"\n" + content;
+		content = "var __dirname = \"" + scriptBaseDirectory + "\"\n" + content;
 		
 		script = outputBase + ".ts";
 		fs.writeFileSync(script, content);
 
 		// TODO: Change this to use .spawnSync instead
-		var result = spawnSync("tsc", ["-module", "commonjs", "-out", outputFile, script], {
+		var result = child_process.spawnSync("tsc", ["--module", "commonjs", "--out", outputFile, script], {
 			stdio: ["ignore", fs.openSync(outputLog, 'a'), fs.openSync(outputLog, 'a')]
 				});
 		
 		try {
 			if(result.error)
 				throw result.error;
+			if(fs.statSync(outputFile).size < 1)
+				throw "Generated empty file";
 			fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
 		} catch(e) {
+			try {
+				fs.unlinkSync(outputFile);
+			} catch(e) {}
+			try {
+				fs.unlinkSync(outputLog);
+			} catch(e) {}
+			
+			console.error("Compile Error:", e);
 			throw "Failed to compile: " + script + "\nCheck " + outputLog + " for details";
 		}
 	}
