@@ -93,7 +93,7 @@ var typeinclude = function(script) {
 		}
 
 		// TODO: Change this to use .spawnSync instead
-		child_process.execSync("tsc -out \"" + outputFile + "\" \"" + script + "\"", outputFile + ".log");
+		child_process.execSync("tsc -module \"commonjs\" -out \"" + outputFile + "\" \"" + script + "\"", outputFile + ".log");
 		try {
 			fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
 		} catch(e) {
