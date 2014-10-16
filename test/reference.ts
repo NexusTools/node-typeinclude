@@ -11,4 +11,4 @@ class InterfaceReference implements MyInterface {
 	}
 }
 
-module.exports = InterfaceReference;
+@main InterfaceReference;

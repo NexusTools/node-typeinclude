@@ -11,31 +11,10 @@ var path = require('path');
 var fs = require('fs');
 var os = require('os');
 
-if(!("spawnSync" in child_process)) {
-	child_process.spawnSync = function(command, args, opts) {
-		var doneFile = tempDirectory + "_tsc.done";
-		try {
-			fs.unlinkSync(doneFile);
-		} catch(e) {}
-		// TODO: Improve concatenation, this is hacky...
-		var cmdline = command + " \"" + args.join("\" \"") + "\" || true; touch " + doneFile;
-		child_process.spawn('sh', ['-c', cmdline], opts);
-		if(process.env.TYPEINCLUDE_VERBOSE)
-			console.log(cmdline);
-		
-		while (!fs.existsSync(doneFile)) {
-			usleep(100000); // 100ms
-		}
-		fs.unlinkSync(doneFile);
-		
-		return {}; // Fake it because I don't think we can make it... without native code...
-	}
-}
-
-var nodereqreg = /^@nodereq (\w+|.+\:\w+)$/gm;
-var includereg = /^@include (\w+|.+\:\w+)$/gm;
-var referencereg = /^@reference ([\w\.\-\/]+)$/gm;
-var mainreg = /^@main (\w+)$/gm;
+var nodereqreg = /^@nodereq ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
+var includereg = /^@include ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
+var referencereg = /^@reference ([\"']?[\w\.\-\/]+[\"']?);?$/gm;
+var mainreg = /^@main ([\"']?\w+[\"']?);?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 
 function cleanArg(arg) {
@@ -61,7 +40,7 @@ tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
 global.__typeinclude__loadcache__ = {};
 
-var typeresolve = function(script, classpath) {
+function typeresolve(script, classpath) {
     classpath = classpath || processDirectory;
     
     if(classpath instanceof Array) // TODO: Implement
@@ -79,7 +58,7 @@ var typeresolve = function(script, classpath) {
     return script;
 }
 
-var typepath = function(script, classpath, dontResolve) {
+function typepath(script, classpath, dontResolve) {
     if(!dontResolve)
         script = typeresolve(script, classpath);
     // TODO: Figure out how to create a EEXIST error
@@ -134,7 +113,7 @@ var typepath = function(script, classpath, dontResolve) {
             outputBase];
 }
 
-var typepreprocess0 = function(script, state) {
+function typepreprocess0(script, state) {
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Preprocessing", script, "from", classpath);
     
@@ -145,6 +124,7 @@ var typepreprocess0 = function(script, state) {
     var classpath = state[1];
     delete state;
     
+    var includes = [];
     var references = [];
     var needRequire = false;
     // TODO: Make this read part by part, not load the entire thing into memory
@@ -159,10 +139,17 @@ var typepreprocess0 = function(script, state) {
             p1[1] = typeresolve(p1[1], classpath);
             if(!fs.existsSync(p1[1]))
                 throw new Error("Included non-existent file: " + p1[1]);
-            references.push(p1[1]);
-            var reference = typepreprocess(p1[1], classpath)[0];
+            if(includes.indexOf(p1[1]) == -1)
+                includes.push(p1[1]);
+            if(references.indexOf(p1[1]) == -1)
+                references.push(p1[1]);
+            var preprocess = typepreprocess(p1[1], classpath, true)[0];
+            /*preprocess[1].forEach(function(ref) {
+                if(references.indexOf(ref) == -1)
+                    references.push(ref);
+            });*/
 
-            return "\n/// <reference path=\"" + reference + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\")";
+            return "\n/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\")";
         });
     }
     if(content.match(referencereg)) {
@@ -174,10 +161,15 @@ var typepreprocess0 = function(script, state) {
             p1 = typeresolve(p1, classpath);
             if(!fs.existsSync(p1))
                 throw new Error("Referenced non-existent file: " + p1);
-            references.push(p1);
-            p1 = typepreprocess(p1, classpath)[0];
+            if(references.indexOf(p1) == -1)
+                references.push(p1);
+            var preprocess = typepreprocess(p1, classpath, true)[0];
+            /*preprocess[1].forEach(function(ref) {
+                if(references.indexOf(ref) == -1)
+                    references.push(ref);
+            });*/
 
-            return "/// <reference path=\"" + p1 + "\" />";
+            return "/// <reference path=\"" + preprocess[0] + "\" />";
         });
     }
     if(content.match(nodereqreg)) {
@@ -197,26 +189,25 @@ var typepreprocess0 = function(script, state) {
     content = "var __classpath = " + JSON.stringify(classpath) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
     fs.writeFileSync(outputSource, content);
     
-    return [outputSource, references];
+    return [outputSource, references, includes];
 }
 
-var typecompile0 = function(script, state) {
-	if(process.env.TYPEINCLUDE_VERBOSE)
-		console.log("Compiling", script, "from", classpath);
-    
+function typecompile0(script, state, complete, noRecursive) {
     var scriptStat = state[2];
     var outputSource = state[0][2];
+    var includes = [];
     try {
         var outStat = fs.statSync(outputSource);
 		if(scriptStat.mtime > outStat.mtime)
 			throw "Script modified since last preprocess";
     } catch(ex) {
-        typepreprocess0(script, state);
+        includes = typepreprocess0(script, state)[2];
     }
     
     var outputFolder = state[0][0];
     var outputFile = state[0][1];
     var outputLog = state[0][3];
+    var outputFin = state[0][4] + ".fin";
     var classpath = state[1];
     delete state;
     
@@ -226,38 +217,94 @@ var typecompile0 = function(script, state) {
     try {
         fs.unlinkSync(outputLog);
     } catch(e) {}
-
-    // TODO: Use multiple processes with exec instead of spawn
-    var result = child_process.spawnSync("tsc", ["--module", "commonjs", "--out", outputFile, outputSource], {
-        stdio: ["ignore", fs.openSync(outputLog, 'a'), fs.openSync(outputLog, 'a')]
-            });
-
     try {
-        if(result.error)
-            throw result.error;
-        if(fs.statSync(outputFile).size < 1)
-            throw new Error("Generated empty file");
-        fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
-    } catch(e) {
-        try {
-            fs.unlinkSync(outputFile);
-        } catch(e) {}
-        try {
-            fs.unlinkSync(outputLog);
-        } catch(e) {}
+        fs.unlinkSync(outputFin);
+    } catch(e) {}
+	if(process.env.TYPEINCLUDE_VERBOSE)
+		console.log("Compiling", script, "from", classpath);
 
-        console.error("Compile Error:", e);
-        throw new Error("Failed to compile: " + script + "\nCheck " + outputLog + " for details");
+    // TODO: Start compiling references
+    var waitFor;
+    if(complete) {
+        waitFor = function() {
+            throw new Error("complete callback passed, synchronous usage disabled");
+        };
+        throw new Error("asynchronous not implemented yet");
+    } else {
+        var otherWaits = [];
+        if(!noRecursive) {
+            if(process.env.TYPEINCLUDE_VERBOSE)
+                console.log("Compiling includes", includes);
+            includes.forEach(function(include) {
+                var compiler = typecompile(include, classpath, undefined, true, true);
+                console.log("Include compiler", compiler);
+                otherWaits.push(compiler[1]);
+            });
+        }
+        waitFor = function() {
+            // Wait for included stuff to compile
+            otherWaits.forEach(function(otherWait) {
+                otherWait();
+            });
+            
+            // Compile myself now
+            while (!fs.existsSync(outputFin)) {
+                usleep(100000); // 100ms
+            }
+
+            try {
+                if(fs.statSync(outputFile).size < 1)
+                    throw new Error("Generated empty file");
+                fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
+            } catch(e) {
+                try {
+                    fs.unlinkSync(outputFile);
+                } catch(e) {}
+                try {
+                    fs.unlinkSync(outputLog);
+                } catch(e) {}
+
+                console.error("Compile Error:", e);
+                throw new Error("Failed to compile: " + script + "\nCheck " + outputLog + " for details");
+            }
+        };
+        
+        var cmdLine = "tsc --module \"commonjs\" --out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
+        if(process.env.TYPEINCLUDE_VERBOSE)
+            console.log("Running", cmdLine);
+        child_process.exec(cmdLine);
     }
     
-    return outputFile;
+    return waitFor;
 }
 
-var typecompile = function(script, classpath, dontResolve) {
+function typecompile(script, classpath, complete, dontResolve, noRecursive) {
     if(!dontResolve)
         script = typeresolve(script, classpath);
-    var state = [typepath(script), classpath, fs.statSync(script)];
-    return typecompile0(script, state);
+    
+    var waitFor = function() {};
+    var path = typepath(script, undefined, false);
+	var scriptStat = fs.statSync(script);
+	try {
+		var outStat = fs.statSync(path[1]);
+		if(scriptStat.mtime > outStat.mtime)
+			throw "Script modified since last compiled";
+	} catch(e) {
+        var state = [path, classpath, scriptStat];
+        try {
+            waitFor = typecompile0(script, [path, classpath, scriptStat], complete, noRecursive);
+        } catch(e) {
+            console.error(e);
+            try {
+                console.dir(e);
+            } catch(e) {}
+            throw e;
+        }
+	}
+    
+    if(!complete)
+        return [path[1], waitFor];
+    return path[1];
 }
 
 var typepreprocess = function(script, classpath, dontResolve) {
@@ -275,18 +322,12 @@ var typeinclude = function(script, classpath, ignoreCaches) {
 	if(!ignoreCaches && script in global.__typeinclude__loadcache__)
 		return global.__typeinclude__loadcache__[script];
     
-	var path = typepath(script, undefined, false);
-	var scriptStat = fs.statSync(script);
-	try {
-		var outStat = fs.statSync(path[1]);
-		if(scriptStat.mtime > outStat.mtime)
-			throw "Script modified since last compiled";
-	} catch(e) {
-        var state = [path, classpath, scriptStat];
-		typecompile0(script, state);
-	}
-	
-	var requireInstance = require(path[1]);
+    var compiler = typecompile(script, classpath, undefined, true);
+    compiler[1]();
+    
+	if(process.env.TYPEINCLUDE_VERBOSE)
+		console.log("Requiring", compiler[0]);
+	var requireInstance = require(compiler[0]);
 	if(!ignoreCaches)
 		global.__typeinclude__loadcache__[script] = requireInstance;
 	return requireInstance;

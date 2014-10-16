@@ -14,11 +14,10 @@ suite('typeinclude', function() {
 	});
 	
 	test('compile', function(){
-		var compiledPath = typeinclude.compile("class", __dirname);
-        var compiledInstance = require(compiledPath);
+		var compiledInstance = typeinclude("class", __dirname);
         assert.equal(compiledInstance.something(2.5), 207.5);
 	});
-	test('typeinclude + @include', function(){
+	test('@include', function(){
 		var clazz = typeinclude("include", __dirname);
 		assert.equal(clazz.something(2.5), 207.5);
 	});

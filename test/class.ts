@@ -4,4 +4,6 @@ class BasicClass {
 	}
 }
 
-module.exports = new BasicClass();
+
+declare var module:any;
+(module).exports = new BasicClass();
