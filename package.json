@@ -30,7 +30,7 @@
 	"main" : "index",
 	"scripts": {
 		"test": "mocha --ui tdd --require test/support/env --reporter spec --timeout 10000 --globals __typeinclude__loadcache__ test/",
-		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --timeout 10000 --report lcovonly -- --require test/support/env --ui tdd --reporter spec test/"
+		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 10000 --require test/support/env --ui tdd --reporter spec test/"
 	},
 	"bin" : { 
 		"nodets" : "./bin/nodets" 
