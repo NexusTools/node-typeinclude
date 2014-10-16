@@ -9,30 +9,39 @@ suite('typeinclude', function() {
 	test('index.js', function(){
 		typeinclude = require(path.dirname(__dirname) + path.sep + "index");
 	});
-	var clazz;
-	test('compile class', function(){
-		clazz = typeinclude(__dirname + path.sep + "class.ts");
+	test('resolve', function(){
+		typeinclude.resolve("include", __dirname);
 	});
-	test('use class method', function(){
-		assert.equal(clazz.something(2.5), 207.5);
+	
+	test('compile', function(){
+		var compiledPath = typeinclude.compile("class", __dirname);
+        var compiledInstance = require(compiledPath);
+        assert.equal(compiledInstance.something(2.5), 207.5);
 	});
-	test('@include', function(){
-		var clazz = typeinclude(__dirname + path.sep + "include.ts");
+	test('typeinclude + @include', function(){
+		var clazz = typeinclude("include", __dirname);
 		assert.equal(clazz.something(2.5), 207.5);
 	});
 	test('@reference', function(){
-		var clazz = typeinclude(__dirname + path.sep + "reference.ts");
+		var clazz = typeinclude("reference", __dirname);
 		var instance = new clazz();
 		assert.equal(instance.method(), "Father");
 		instance = new clazz(3);
 		assert.equal(instance.method(), "Fat");
 	});
 	test('@nodereq', function(){
-		var pathJoin = typeinclude(__dirname + path.sep + "nodereq.ts");
+		var pathJoin = typeinclude("nodereq", __dirname);
 		assert.equal(pathJoin(), "/test/folder");
 	});
 	test('@main', function(){
-		var mainTest = typeinclude(__dirname + path.sep + "main.ts");
+		var mainTest = typeinclude("main", __dirname);
 		assert.equal(mainTest instanceof Function, true);
+	});
+	var bigtest;
+	test('compile bigtest', function(){
+		bigtest = typeinclude("BigTest", __dirname + path.sep + "bigtest");
+	});
+	test('run bigtest', function(){
+		assert.equal((new bigtest()).run(2), 16);
 	});
 });
