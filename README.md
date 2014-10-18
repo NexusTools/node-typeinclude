@@ -22,16 +22,10 @@ instance.doSomething();
 usage
 -----
 ```
+var path = require("path");
 var typeinclude = require("typeinclude");
-var myTypeScriptClass = typeinclude("./myTypeScriptClass.ts");
+var myTypeScriptClass = typeinclude("myTypeScriptClass.ts", __dirname + path.sep + "folder with typescript relative to current file");
 myTypeScriptClass.someMethod();
-```
-
-or boot a typescript
-
-```
-var typeinclude = require("typeinclude");
-typeinclude("index.ts");
 ```
 
 or from the commandline
