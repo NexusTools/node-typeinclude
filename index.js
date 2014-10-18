@@ -62,8 +62,10 @@ function typeresolve(script, classpath) {
 }
 
 function typepath(script, classpath, dontResolve) {
-    if(!dontResolve)
+    if(!dontResolve) {
+        classpath = classpath || path.dirname(script);
         script = typeresolve(script, classpath);
+    }
     // TODO: Figure out how to create a EEXIST error
     if(!fs.existsSync(script))
         throw new Error("No such file: " + script);
@@ -118,6 +120,7 @@ function typepath(script, classpath, dontResolve) {
 }
 
 function typepreprocess0(script, state) {
+    var classpath = state[1];
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Preprocessing", script, "from", classpath);
     var scriptStat = state[2];
@@ -138,7 +141,6 @@ function typepreprocess0(script, state) {
     var outputFile = state[0][1];
     var outputSource = state[0][2];
     var outputLog = state[0][3];
-    var classpath = state[1];
     var target = "ES3";
     delete state;
     
@@ -306,6 +308,8 @@ function typecompile0(script, state, complete, noRecursive) {
 }
 
 function typecompile(script, classpath, complete, dontResolve, noRecursive) {
+    classpath = classpath || path.dirname(script);
+    
     if(!dontResolve)
         script = typeresolve(script, classpath);
     
@@ -342,6 +346,8 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
 }
 
 function typepreprocess(script, classpath, dontResolve) {
+    classpath = classpath || path.dirname(script);
+    
     if(!dontResolve)
         script = typeresolve(script, classpath);
     var state = [typepath(script, undefined, true), classpath, fs.statSync(script)];
@@ -349,6 +355,8 @@ function typepreprocess(script, classpath, dontResolve) {
 }
 
 var typeinclude = function(script, classpath, ignoreCaches) {
+    classpath = classpath || path.dirname(script);
+    
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Including", script, "from", classpath);
     script = typeresolve(script, classpath);
