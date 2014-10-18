@@ -32,6 +32,12 @@ suite('typeinclude', function() {
 		var pathJoin = typeinclude("nodereq", __dirname);
 		assert.equal(pathJoin(), "/test/folder");
 	});
+	test('@target', function(){
+        var ES5Test = typeinclude("es5", __dirname);
+        var instance = new ES5Test();
+        instance.test = 5;
+		assert.equal(instance.test, 10);
+	});
 	test('@main', function(){
 		var mainTest = typeinclude("main", __dirname);
 		assert.equal(mainTest instanceof Function, true);

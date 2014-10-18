@@ -11,9 +11,12 @@ var path = require('path');
 var fs = require('fs');
 var os = require('os');
 
+var version = require(__dirname + path.sep + 'package.json').version;
+
 var nodereqreg = /^@nodereq ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
 var includereg = /^@include ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
 var referencereg = /^@reference ([\"']?[\w\.\-\/]+[\"']?);?$/gm;
+var targetreg = /^@target ([\"']?\w+[\"']?);?$/m;
 var mainreg = /^@main ([\"']?\w+[\"']?);?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 
@@ -41,7 +44,7 @@ tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 global.__typeinclude__loadcache__ = {};
 
 function typeresolve(script, classpath) {
-    classpath = classpath || processDirectory;
+    classpath = classpath || path.dirname(script);
     
     if(classpath instanceof Array) // TODO: Implement
         throw new Error("Arrays as classpaths not supported yet");
@@ -110,18 +113,33 @@ function typepath(script, classpath, dontResolve) {
             outputBase + ".js", // Compiled file
             outputBase + ".ts", // Preprocessed file
             outputBase + ".log", // Compile log
+            outputBase + ".ver", // Compile version
             outputBase];
 }
 
 function typepreprocess0(script, state) {
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Preprocessing", script, "from", classpath);
+    var scriptStat = state[2];
+    
+    var preprocessDataFile = state[0][5] + ".json";
+    try {
+        var outStat = fs.statSync(outputSource);
+		if(scriptStat.mtime > outStat.mtime)
+			throw "Script modified since last preprocess";
+        
+        var preprocessData = JSON.parse(fs.readFileSync(preprocessDataFile));
+        if(preprocessData.length != 4)
+            throw "Preprocess data corrupt";
+        return preprocessData;
+    } catch(e) {}
     
     var outputFolder = state[0][0];
     var outputFile = state[0][1];
     var outputSource = state[0][2];
     var outputLog = state[0][3];
     var classpath = state[1];
+    var target = "ES3";
     delete state;
     
     var includes = [];
@@ -179,6 +197,12 @@ function typepreprocess0(script, state) {
             return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
         });
     }
+    if(content.match(targetreg)) {
+        content = content.replace(targetreg, function(match, p1, offset, string) {
+            target = p1;
+            return "";
+        });
+    }
     if(content.match(mainreg)) {
         content = content.replace(mainreg, function(match, p1, offset, string) {
             return "declare var module:any;(module).exports = " + p1 + ";";
@@ -189,25 +213,24 @@ function typepreprocess0(script, state) {
     content = "var __classpath = " + JSON.stringify(classpath) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
     fs.writeFileSync(outputSource, content);
     
-    return [outputSource, references, includes];
+    var preprocessData = [outputSource, references, includes, target];
+    fs.writeFileSync(preprocessDataFile, JSON.stringify(preprocessData));
+    return preprocessData;
 }
 
 function typecompile0(script, state, complete, noRecursive) {
     var scriptStat = state[2];
     var outputSource = state[0][2];
-    var includes = [];
-    try {
-        var outStat = fs.statSync(outputSource);
-		if(scriptStat.mtime > outStat.mtime)
-			throw "Script modified since last preprocess";
-    } catch(ex) {
-        includes = typepreprocess0(script, state)[2];
-    }
+    var preprocessData = typepreprocess0(script, state);
+    var includes = preprocessData[2];
+    var target = preprocessData[3];
+    delete preprocessData;
     
     var outputFolder = state[0][0];
     var outputFile = state[0][1];
     var outputLog = state[0][3];
-    var outputFin = state[0][4] + ".fin";
+    var outputVer = state[0][4];
+    var outputFin = state[0][5] + ".fin";
     var classpath = state[1];
     delete state;
     
@@ -237,7 +260,6 @@ function typecompile0(script, state, complete, noRecursive) {
                 console.log("Compiling includes", includes);
             includes.forEach(function(include) {
                 var compiler = typecompile(include, classpath, undefined, true, true);
-                console.log("Include compiler", compiler);
                 otherWaits.push(compiler[1]);
             });
         }
@@ -256,6 +278,7 @@ function typecompile0(script, state, complete, noRecursive) {
                 if(fs.statSync(outputFile).size < 1)
                     throw new Error("Generated empty file");
                 fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
+                fs.writeFileSync(outputVer, version);
             } catch(e) {
                 try {
                     fs.unlinkSync(outputFile);
@@ -269,7 +292,7 @@ function typecompile0(script, state, complete, noRecursive) {
             }
         };
         
-        var cmdLine = "tsc --module \"commonjs\" --out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
+        var cmdLine = "tsc --target \"" + target + "\" --sourcemap --module \"commonjs\" --out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
         if(process.env.TYPEINCLUDE_VERBOSE)
             console.log("Running", cmdLine);
         child_process.exec(cmdLine);
@@ -283,13 +306,20 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
         script = typeresolve(script, classpath);
     
     var waitFor = function() {};
-    var path = typepath(script, undefined, false);
+    var path = typepath(script, undefined, true);
 	var scriptStat = fs.statSync(script);
 	try {
 		var outStat = fs.statSync(path[1]);
 		if(scriptStat.mtime > outStat.mtime)
 			throw "Script modified since last compiled";
+        
+        var cVer = fs.readFileSync(path[4]);
+        if(cVer != version)
+            throw "Compiled using V" + cVer + " of typeinclude, now V" + version;
 	} catch(e) {
+        if(process.env.TYPEINCLUDE_VERBOSE)
+            console.error(e);
+        
         var state = [path, classpath, scriptStat];
         try {
             waitFor = typecompile0(script, [path, classpath, scriptStat], complete, noRecursive);
@@ -307,10 +337,10 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
     return path[1];
 }
 
-var typepreprocess = function(script, classpath, dontResolve) {
+function typepreprocess(script, classpath, dontResolve) {
     if(!dontResolve)
         script = typeresolve(script, classpath);
-    var state = [typepath(script), classpath, fs.statSync(script)];
+    var state = [typepath(script, undefined, true), classpath, fs.statSync(script)];
     return typepreprocess0(script, state);
 }
 
