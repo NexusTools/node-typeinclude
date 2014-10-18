@@ -156,16 +156,20 @@ function typepreprocess0(script, state) {
                 p1[1] += ".ts";
             p1[1] = typeresolve(p1[1], classpath);
             if(!fs.existsSync(p1[1]))
-                throw new Error("Included non-existent file: " + p1[1]);
+                throw new Error("Included non-existent file: " + p1[1] + ", with classpath: " + JSON.stringify(classpath));
             if(includes.indexOf(p1[1]) == -1)
                 includes.push(p1[1]);
             if(references.indexOf(p1[1]) == -1)
                 references.push(p1[1]);
-            var preprocess = typepreprocess(p1[1], classpath, true)[0];
-            /*preprocess[1].forEach(function(ref) {
+            var preprocess = typepreprocess(p1[1], classpath, true);
+            preprocess[1].forEach(function(ref) {
                 if(references.indexOf(ref) == -1)
                     references.push(ref);
-            });*/
+            });
+            preprocess[2].forEach(function(inc) {
+                if(includes.indexOf(inc) == -1)
+                    includes.push(inc);
+            });
 
             return "\n/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\")";
         });
@@ -178,14 +182,14 @@ function typepreprocess0(script, state) {
             
             p1 = typeresolve(p1, classpath);
             if(!fs.existsSync(p1))
-                throw new Error("Referenced non-existent file: " + p1);
+                throw new Error("Referenced non-existent file: " + p1 + ", with classpath: " + JSON.stringify(classpath));
             if(references.indexOf(p1) == -1)
                 references.push(p1);
-            var preprocess = typepreprocess(p1, classpath, true)[0];
-            /*preprocess[1].forEach(function(ref) {
+            var preprocess = typepreprocess(p1, classpath, true);
+            preprocess[1].forEach(function(ref) {
                 if(references.indexOf(ref) == -1)
                     references.push(ref);
-            });*/
+            });
 
             return "/// <reference path=\"" + preprocess[0] + "\" />";
         });
