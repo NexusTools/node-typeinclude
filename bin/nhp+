@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+
+var typeinclude = require("typeinclude");
+typeinclude.compileall(process.argv[2]);

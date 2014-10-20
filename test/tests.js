@@ -1,6 +1,6 @@
-var assert = require('assert')
+var assert = require('assert');
 var child_process = require("child_process");
-var path = require('path')
+var path = require('path');
 
 suite('typeinclude', function() {
 	var typeinclude;
@@ -54,6 +54,11 @@ suite('typeinclude', function() {
 		assert.equal(instance.method(), "Father");
 		instance = new clazz(3);
 		assert.equal(instance.method(), "Fat");
+	});
+	test('@plugin', function(){
+        typeinclude.addclasspath([[__dirname + path.sep + "all"]]);
+        var All = typeinclude("All");
+        assert.equal((new All()).doBelong(), "All Your Base Are Belong To Us");
 	});
 	test('@nodereq', function(){
 		var pathJoin = typeinclude("nodereq");

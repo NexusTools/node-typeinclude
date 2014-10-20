@@ -15,7 +15,9 @@ var version = require(__dirname + path.sep + 'package.json').version;
 
 var nodereqreg = /^@nodereq ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
 var includereg = /^@include ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
+var pluginreg = /^@plugin ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
 var referencereg = /^@reference ([\"']?[\w\.\-\/]+[\"']?);?$/gm;
+var noautocompilereg = /^@noautocompile;?$/m;
 var targetreg = /^@target ([\"']?\w+[\"']?);?$/m;
 var mainreg = /^@main ([\"']?\w+[\"']?);?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
@@ -44,6 +46,7 @@ tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 var globalClassPath = [processDirectory];
 global.__typeinclude__ = {
     "loadcache": {},
+    "plugincache": {},
     "classfuncs": []
 };
 
@@ -198,12 +201,9 @@ function typeresolve(script, classpath) {
 }
 
 function typepath(script, classpath, dontResolve) {
+    classpath = classpath || typeclasspath(path.dirname(script));
     if(!dontResolve)
-        classpath = classpath || typeclasspath(path.dirname(script));
-    else {
-        classpath = classpath || typeclasspath();
         script = typeresolve(script, classpath);
-    }
     
     try {
 		fs.mkdirSync(baseTempDirectory);
@@ -281,16 +281,15 @@ function typepreprocess0(script, state) {
     
     var includes = [];
     var references = [];
-    var needRequire = false;
+    var disallowAutoCompile = false;
+    var needRequire = false, needTypeinclude = false;
     // TODO: Make this read part by part, not load the entire thing into memory
     var content = fs.readFileSync(script, {encoding: "utf8"});
     if(content.match(includereg)) {
         needRequire = true;
-        content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
+        needTypeinclude = true;
         content = content.replace(includereg, function(match, p1, offset, string) {
             p1 = splitArg(cleanArg(p1));
-            if(!p1[1].endsWith(".ts"))
-                p1[1] += ".ts";
             p1[1] = typeresolve(p1[1], classpath);
             if(includes.indexOf(p1[1]) == -1)
                 includes.push(p1[1]);
@@ -306,15 +305,12 @@ function typepreprocess0(script, state) {
                     includes.push(inc);
             });
 
-            return "\n/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\")";
+            return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\");";
         });
     }
     if(content.match(referencereg)) {
         content = content.replace(referencereg, function(match, p1, offset, string) {
             p1 = cleanArg(p1);
-            if(!p1.endsWith(".ts"))
-                p1 += ".ts";
-            
             p1 = typeresolve(p1, classpath);
             if(references.indexOf(p1) == -1)
                 references.push(p1);
@@ -327,11 +323,36 @@ function typepreprocess0(script, state) {
             return "/// <reference path=\"" + preprocess[0] + "\" />";
         });
     }
+    if(content.match(pluginreg)) {
+        needRequire = true;
+        needTypeinclude = true;
+        content = content.replace(pluginreg, function(match, p1, offset, string) {
+            p1 = splitArg(cleanArg(p1));
+            p1[1] = typeresolve(p1[1], classpath);
+            if(includes.indexOf(p1[1]) == -1)
+                includes.push(p1[1]);
+            if(references.indexOf(p1[1]) == -1)
+                references.push(p1[1]);
+            var preprocess = typepreprocess(p1[1], classpath, true);
+            preprocess[1].forEach(function(ref) {
+                if(references.indexOf(ref) == -1)
+                    references.push(ref);
+            });
+
+            return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude.plugin(\"" + p1[1] + "\");";
+        });
+    }
     if(content.match(nodereqreg)) {
         needRequire = true;
         content = content.replace(nodereqreg, function(match, p1, offset, string) {
             p1 = splitArg(cleanArg(p1));
             return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
+        });
+    }
+    if(content.match(noautocompilereg)) {
+        content = content.replace(noautocompilereg, function(match, p1, offset, string) {
+            disallowAutoCompile = true;
+            return "";
         });
     }
     if(content.match(targetreg)) {
@@ -345,12 +366,14 @@ function typepreprocess0(script, state) {
             return "declare var module:any;(module).exports = " + p1 + ";";
         });
     }
+    if(needTypeinclude)
+        content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
     if(needRequire)
         content = "declare var require:Function;\n" + content;
     content = "var __classpath = " + JSON.stringify(classpath) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
     fs.writeFileSync(outputSource, content);
     
-    var preprocessData = [outputSource, references, includes, target];
+    var preprocessData = [outputSource, references, includes, target, disallowAutoCompile];
     fs.writeFileSync(preprocessDataFile, JSON.stringify(preprocessData));
     return preprocessData;
 }
@@ -436,12 +459,9 @@ function typecompile0(script, state, complete, noRecursive) {
 }
 
 function typecompile(script, classpath, complete, dontResolve, noRecursive) {
+    classpath = classpath || typeclasspath(path.dirname(script));
     if(!dontResolve)
-        classpath = classpath || typeclasspath(path.dirname(script));
-    else {
-        classpath = classpath || typeclasspath();
         script = typeresolve(script, classpath);
-    }
     
     var waitFor = function() {};
     var path = typepath(script, undefined, true);
@@ -475,6 +495,32 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
     return path[1];
 }
 
+function typeautocompile0(directory, classpath, asyncstate, ignoreNoAutoCompile, waitFors) {
+    fs.readdirSync(directory).forEach(function(child) {
+        var fullpath = path.resolve(directory, child);
+        if(fs.lstatSync(fullpath).isDirectory())
+            typeautocompile0(fullpath);
+        else if(child.endsWith(".ts")) {
+            if(!ignoreNoAutoCompile) {
+                var preprocess = typepreprocess(fullpath, classpath);
+                if(preprocess[4]) // @noautocompile
+                    return;
+            }
+            waitFors.push(typecompile(fullpath, classpath)[1]);
+        }
+    });
+}
+
+function typeautocompile(directory, classpath, complete, ignoreNoAutoCompile) {
+    var waitFors = [];
+    if(complete)
+        throw new Error("Async autocompile not supported yet");
+    typeautocompile0(directory, classpath, undefined, ignoreNoAutoCompile, waitFors);
+    waitFors.forEach(function(waitFor) {
+        waitFor();
+    });
+}
+
 function typepreprocess(script, classpath, dontResolve) {
     classpath = classpath || typeclasspath(path.dirname(script));
     
@@ -505,10 +551,46 @@ function typeinclude(script, classpath, ignoreCaches) {
 	return requireInstance;
 }
 
+function typeplugin(script, classpath) {
+    classpath = classpath || typeclasspath(path.dirname(script));
+    
+	if(process.env.TYPEINCLUDE_VERBOSE)
+		console.log("Loading Plugin", script, "from", classpath);
+    script = typeresolve(script, classpath);
+    
+	if(script in global.__typeinclude__.plugincache)
+		return global.__typeinclude__.plugincache[script];
+    
+    var plugin = {
+        name: path.basename(script, ".ts"),
+        impls: [],
+        errors: []
+    };
+    plugin.storage = path.resolve(path.dirname(script), plugin.name);
+    
+    var files = fs.readdirSync(plugin.storage);
+    files.sort();
+    typeautocompile(plugin.storage, classpath, undefined, true);
+    files.forEach(function(file) {
+        try {
+            var pluginImpl = typeinclude(path.resolve(plugin.storage, file), classpath);
+            plugin.impls.push(new pluginImpl());
+        } catch(e) {
+            console.error(e);
+            plugin.errors.push(e);
+        }
+    });
+    
+	global.__typeinclude__.plugincache[script] = plugin;
+	return plugin;
+}
+
 typeinclude.path = typepath;
 typeinclude.preprocess = typepreprocess;
+typeinclude.autocompile = typeautocompile;
 typeinclude.compile = typecompile;
 typeinclude.resolve = typeresolve;
+typeinclude.plugin = typeplugin;
 typeinclude.clean = typeclean;
 
 // Global Class Path

@@ -2,10 +2,10 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"licenses": [
 		{
-			"type": "Apache License 2.0", 
+			"type": "Apache License 2.0",
 			"url": "https://github.com/NexusTools/node-typeinclude/blob/master/LICENSE.md"
 		}
 	],
@@ -29,7 +29,7 @@
 	"preferGlobal" : true,
 	"main" : "index",
 	"scripts": {
-		"test": "mocha --ui tdd --require test/support/env --reporter spec --timeout 10000 --globals __typeinclude__loadcache__ test/",
+		"test": "mocha --ui tdd --bail --require test/support/env --reporter spec --timeout 10000 --globals __typeinclude__loadcache__ test/",
 		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 10000 --require test/support/env --ui tdd --reporter spec test/"
 	},
 	"bin" : { 

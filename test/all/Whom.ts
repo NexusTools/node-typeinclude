@@ -1,0 +1,3 @@
+interface Whom {
+    to():String;
+}
