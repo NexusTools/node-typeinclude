@@ -66,10 +66,10 @@ function typeclean() {
 function typeclasspath(overrides) {
     var classPath;
     if(overrides && overrides != ".") {
-        if((typeof overrides) == "string")
-            classPath = [overrides];
+        if(overrides instanceof Array)
+            classPath = overrides.slice(0); // copy
         else
-            classPath = overrides;
+            classPath = [String(overrides)];
         globalClassPath.forEach(function(arg) {
             if(classPath.indexOf(arg) == -1)
                 classPath.push(arg);
@@ -83,18 +83,31 @@ function typeclasspath(overrides) {
 }
 
 function typeaddpath(path) {
-	if(!(typeof path) == "string")
-		throw new Error("Expected a string for path: " + path);
+	if(arguments.length > 1) {
+        Array.slice(arguments, 0).forEach(function(arg) {
+            typeaddpath(arg);
+        });
+        return;
+    }
+	if(path instanceof Array) {
+        path.forEach(function(cpath) {
+            typeaddpath(cpath);
+        });
+        return;
+    }
+    path = String(path);
 
     if(globalClassPath.indexOf(path) == -1)
         globalClassPath.push(path);
 }
 
 function typehaspath(path) {
+    // TODO: Make this recurse arrays
     return globalClassPath.indexOf(path) != -1;
 }
 
 function typeremovepath(path) {
+    // TODO: Make this recurse arrays
     var pos = globalClassPath.indexOf(path);
     if(pos > -1)
         globalClassPath.splice(pos, 1);
