@@ -44,7 +44,7 @@ tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 var globalClassPath = [processDirectory];
 global.__typeinclude__ = {
     "loadcache": {},
-    "classfuncs": {}
+    "classfuncs": []
 };
 
 function typeclean0(directory) {
@@ -74,40 +74,67 @@ function typeclasspath(overrides) {
             if(classPath.indexOf(arg) == -1)
                 classPath.push(arg);
         });
-        
-        classPath.splice(arguments.length, 0, globalClassPath);
     } else
         classPath = globalClassPath.slice(0); // Create a copy
     
     return classPath;
 }
 
-function typeaddpath(path) {
+function typeaddpath(newpath) {
 	if(arguments.length > 1) {
         Array.slice(arguments, 0).forEach(function(arg) {
             typeaddpath(arg);
         });
         return;
     }
-	if(path instanceof Array) {
-        path.forEach(function(cpath) {
+	if(newpath instanceof Array) {
+        newpath.forEach(function(cpath) {
             typeaddpath(cpath);
         });
         return;
     }
-    path = String(path);
+    if(newpath instanceof Function) {
+        var pos = global.__typeinclude__.classfuncs.indexOf(newpath);
+        if(pos == -1) {
+            pos = global.__typeinclude__.classfuncs.length;
+            global.__typeinclude__.classfuncs.push(newpath);
+        }
+        newpath = pos;
+    } else
+        newpath = path.resolve(processDirectory, String(newpath));
 
-    if(globalClassPath.indexOf(path) == -1)
-        globalClassPath.push(path);
+    if(globalClassPath.indexOf(newpath) == -1)
+        globalClassPath.push(newpath);
 }
 
 function typehaspath(path) {
     // TODO: Make this recurse arrays
+    
+    if(path instanceof Function) {
+        var pos = global.__typeinclude__.classfuncs.indexOf(path);
+        if(pos == -1) {
+            pos = global.__typeinclude__.classfuncs.length;
+            global.__typeinclude__.classfuncs.push(path);
+        }
+        path = pos;
+    } else
+        path = String(path);
+    
     return globalClassPath.indexOf(path) != -1;
 }
 
 function typeremovepath(path) {
     // TODO: Make this recurse arrays
+    if(path instanceof Function) {
+        var pos = global.__typeinclude__.classfuncs.indexOf(path);
+        if(pos == -1) {
+            pos = global.__typeinclude__.classfuncs.length;
+            global.__typeinclude__.classfuncs.push(path);
+        }
+        path = pos;
+    } else
+        path = String(path);
+    
     var pos = globalClassPath.indexOf(path);
     if(pos > -1)
         globalClassPath.splice(pos, 1);
@@ -118,19 +145,30 @@ function typeresolve(script, classpath) {
     classpath = classpath || typeclasspath();
     
     if(classpath instanceof Array) {
-        if(!script.endsWith(".ts"))
-            script += ".ts";
+        var scriptFile = script;
+        if(!scriptFile.endsWith(".ts"))
+            scriptFile += ".ts";
         
         var foundScript;
         try {
-            function scanPath(classpath) {
-                classpath.forEach(function(cpath) {
+            function scanPath(scanpath) {
+                scanpath.forEach(function(cpath) {
                     if(foundScript instanceof Array)
                         scanPath(foundScript);
                     else {
-                        foundScript = path.resolve(cpath, script);
-                        fs.existsSync(foundScript);
-                        throw $break;
+                        try {
+                            if(isNaN(cpath))
+                                throw "isNaN: " + cpath;
+                            var func = global.__typeinclude__.classfuncs[cpath];
+                            if(!func)
+                                throw "false: " + cpath;
+                            foundScript = func(script, classpath, scriptFile);
+                        } catch(e) {
+                            console.error(e);
+                            foundScript = path.resolve(String(cpath), scriptFile);
+                        }
+                        if(fs.existsSync(foundScript))
+                            throw $break;
                     }
                 });
             }
@@ -141,20 +179,17 @@ function typeresolve(script, classpath) {
                 throw e;
         }
         script = foundScript;
-        
     } else if(classpath instanceof Function) // TODO: Implement
         throw new Error("Functions as classpaths not supported yet");
-    else if((typeof classpath) == "string") {
-        script = path.resolve(classpath, script);
+    else {
+        script = path.resolve(String(classpath), script);
         if(!script.endsWith(".ts"))
             script += ".ts";
-
-        // TODO: Figure out how to create a EEXIST error
-        if(!fs.existsSync(script))
-            throw new Error("No such file: " + script);
     }
-        
     
+    if(!fs.existsSync(script))
+        throw new Error("No such file: " + script);
+        
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Resolved", script, "from", classpath);
     

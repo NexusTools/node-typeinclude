@@ -28,6 +28,17 @@ suite('typeinclude', function() {
 	test('resolve', function(){
         assert.equal(typeinclude.resolve("include"), __dirname + path.sep + "include.ts");
 	});
+	test('use classpath function', function(){
+		typeinclude.addclasspath(function(script, classpath, scriptFile) {
+            return path.resolve(__dirname, scriptFile);
+        });
+		typeinclude.removeclasspath(__dirname);
+        assert.equal(typeinclude.classpath().length, 1);
+	});
+    
+	test('resolve again', function(){
+        assert.equal(typeinclude.resolve("include"), __dirname + path.sep + "include.ts");
+	});
 	
 	test('compile', function(){
 		var compiledInstance = typeinclude("class");
@@ -60,8 +71,7 @@ suite('typeinclude', function() {
 	});
 	var bigtest;
 	test('compile bigtest', function(){
-        typeinclude.removeclasspath(__dirname);
-        typeinclude.addclasspath(__dirname + path.sep + "bigtest");
+        typeinclude.addclasspath([[__dirname + path.sep + "bigtest"]]);
 		bigtest = typeinclude("BigTest");
 	});
 	test('run bigtest', function(){
