@@ -551,12 +551,16 @@ function typeautocompile0(directory, classpath, asyncstate, ignoreNoAutoCompile,
         if(fs.lstatSync(fullpath).isDirectory())
             typeautocompile0(fullpath, classpath, asyncstate, ignoreNoAutoCompile, waitFors);
         else if(child.endsWith(".ts")) {
-            if(!ignoreNoAutoCompile) {
-                var preprocess = typepreprocess(fullpath, classpath);
-                if(preprocess[4]) // @noautocompile
-                    return;
+            try {
+                if(!ignoreNoAutoCompile) {
+                    var preprocess = typepreprocess(fullpath, classpath);
+                    if(preprocess[4]) // @noautocompile
+                        return;
+                }
+                waitFors.push(typecompile(fullpath, classpath)[1]);
+            } catch(e) {
+                // TODO: Store errors and retrrn them
             }
-            waitFors.push(typecompile(fullpath, classpath)[1]);
         }
     });
 }
