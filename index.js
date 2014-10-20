@@ -123,17 +123,19 @@ function typeresolve(script, classpath) {
         
         var foundScript;
         try {
-            classpath.forEach(function(cpath) {
-                try {
-                    foundScript = path.resolve(cpath, script);
-                    fs.existsSync(foundScript);
-                    throw $break;
-                } catch(e) {
-                	console.error(cpath, script);
-                    if(e != $break)
-                        throw e;
-                }
-            });
+            function scanPath(classpath) {
+                classpath.forEach(function(cpath) {
+                    if(foundScript instanceof Array)
+                        scanPath(foundScript);
+                    else {
+                        foundScript = path.resolve(cpath, script);
+                        fs.existsSync(foundScript);
+                        throw $break;
+                    }
+                });
+            }
+            
+            scanPath(classpath);
         } catch(e) {
             if(e != $break)
                 throw e;
