@@ -108,35 +108,35 @@ function typeaddpath(newpath) {
         globalClassPath.push(newpath);
 }
 
-function typehaspath(path) {
+function typehaspath(cpath) {
     // TODO: Make this recurse arrays
     
-    if(path instanceof Function) {
-        var pos = global.__typeinclude__.classfuncs.indexOf(path);
+    if(cpath instanceof Function) {
+        var pos = global.__typeinclude__.classfuncs.indexOf(cpath);
         if(pos == -1) {
             pos = global.__typeinclude__.classfuncs.length;
-            global.__typeinclude__.classfuncs.push(path);
+            global.__typeinclude__.classfuncs.push(cpath);
         }
-        path = pos;
+        cpath = pos;
     } else
-        path = String(path);
+        cpath = String(cpath);
     
-    return globalClassPath.indexOf(path) != -1;
+    return globalClassPath.indexOf(cpath) != -1;
 }
 
-function typeremovepath(path) {
+function typeremovepath(cpath) {
     // TODO: Make this recurse arrays
-    if(path instanceof Function) {
-        var pos = global.__typeinclude__.classfuncs.indexOf(path);
+    if(cpath instanceof Function) {
+        var pos = global.__typeinclude__.classfuncs.indexOf(cpath);
         if(pos == -1) {
             pos = global.__typeinclude__.classfuncs.length;
-            global.__typeinclude__.classfuncs.push(path);
+            global.__typeinclude__.classfuncs.push(cpath);
         }
-        path = pos;
+        cpath = pos;
     } else
-        path = String(path);
+        cpath = String(cpath);
     
-    var pos = globalClassPath.indexOf(path);
+    var pos = globalClassPath.indexOf(cpath);
     if(pos > -1)
         globalClassPath.splice(pos, 1);
 }
@@ -513,23 +513,23 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
         script = typeresolve(script, classpath);
     
     var waitFor = function() {};
-    var path = typepath(script, undefined, true);
+    var tpath = typepath(script, undefined, true);
 	var scriptStat = fs.statSync(script);
 	try {
-		var outStat = fs.statSync(path[1]);
+		var outStat = fs.statSync(tpath[1]);
 		if(scriptStat.mtime > outStat.mtime)
 			throw "Script modified since last compiled";
         
-        var cVer = fs.readFileSync(path[4]);
+        var cVer = fs.readFileSync(tpath[4]);
         if(cVer != version)
             throw "Compiled using V" + cVer + " of typeinclude, now V" + version;
 	} catch(e) {
         if(process.env.TYPEINCLUDE_VERBOSE)
             console.error(e);
         
-        var state = [path, classpath, scriptStat];
+        var state = [tpath, classpath, scriptStat];
         try {
-            waitFor = typecompile0(script, [path, classpath, scriptStat], complete, noRecursive);
+            waitFor = typecompile0(script, [tpath, classpath, scriptStat], complete, noRecursive);
         } catch(e) {
             console.error(e);
             try {
@@ -540,8 +540,8 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
 	}
     
     if(!complete)
-        return [path[1], waitFor];
-    return path[1];
+        return [tpath[1], waitFor];
+    return tpath[1];
 }
 
 function typeautocompile0(directory, classpath, asyncstate, ignoreNoAutoCompile, waitFors) {
