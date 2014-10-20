@@ -42,20 +42,25 @@ var baseTempDirectory = tempDirectory;
 tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
 var globalClassPath = [processDirectory];
-global.__typeinclude__loadcache__ = {};
+global.__typeinclude__ = {
+    "loadcache": {},
+    "classfuncs": {}
+};
 
 function typeclean0(directory) {
     fs.readdirSync(directory).forEach(function(child) {
         var fullpath = path.resolve(directory, child);
-        if(fs.lstatSync(fullpath).isDirectory())
+        if(fs.lstatSync(fullpath).isDirectory()) {
             typeclean0(fullpath);
-        else
+            fs.rmdirSync(fullpath);
+        } else
             fs.unlinkSync(fullpath);
     });
 }
 
 function typeclean() {
-    typeclean0(tempDirectory);
+    if(fs.existsSync(tempDirectory))
+        typeclean0(tempDirectory);
 }
 
 function typeclasspath(overrides) {
@@ -78,6 +83,9 @@ function typeclasspath(overrides) {
 }
 
 function typeaddpath(path) {
+	if(!(typeof path) == "string")
+		throw new Error("Expected a string for path: " + path);
+
     if(globalClassPath.indexOf(path) == -1)
         globalClassPath.push(path);
 }
@@ -108,6 +116,7 @@ function typeresolve(script, classpath) {
                     fs.existsSync(foundScript);
                     throw $break;
                 } catch(e) {
+                	console.error(cpath, script);
                     if(e != $break)
                         throw e;
                 }
@@ -431,8 +440,8 @@ function typeinclude(script, classpath, ignoreCaches) {
 		console.log("Including", script, "from", classpath);
     script = typeresolve(script, classpath);
     
-	if(!ignoreCaches && script in global.__typeinclude__loadcache__)
-		return global.__typeinclude__loadcache__[script];
+	if(!ignoreCaches && script in global.__typeinclude__.loadcache)
+		return global.__typeinclude__.loadcache[script];
     
     var compiler = typecompile(script, classpath, undefined, true);
     compiler[1]();
@@ -441,7 +450,7 @@ function typeinclude(script, classpath, ignoreCaches) {
 		console.log("Requiring", compiler[0]);
 	var requireInstance = require(compiler[0]);
 	if(!ignoreCaches)
-		global.__typeinclude__loadcache__[script] = requireInstance;
+		global.__typeinclude__.loadcache[script] = requireInstance;
 	return requireInstance;
 }
 
