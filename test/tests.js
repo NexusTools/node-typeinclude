@@ -70,6 +70,11 @@ suite('typeinclude', function() {
         instance.test = 5;
 		assert.equal(instance.test, 10);
 	});
+	test('@strip', function(){
+        var StripTest = typeinclude("strip");
+        var instance = new StripTest();
+		assert.equal(instance.test(42), 160.44);
+	});
 	test('@main', function(){
 		var mainTest = typeinclude("main");
 		assert.equal(mainTest instanceof Function, true);

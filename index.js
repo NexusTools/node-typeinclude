@@ -12,15 +12,13 @@ var fs = require('fs');
 var os = require('os');
 
 var version = require(__dirname + path.sep + 'package.json').version;
-
-var nodereqreg = /^@nodereq ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
-var includereg = /^@include ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
-var pluginreg = /^@plugin ([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?);?$/gm;
-var referencereg = /^@reference ([\"']?[\w\.\-\/]+[\"']?);?$/gm;
-var noautocompilereg = /^@noautocompile;?$/m;
-var targetreg = /^@target ([\"']?\w+[\"']?);?$/m;
-var mainreg = /^@main ([\"']?\w+[\"']?);?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
+var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
+var macros = {};
+
+function typeregistermacro(name, pattern, callback, replaceWith) {
+    macros[name] = [pattern, callback, replaceWith];
+}
 
 function cleanArg(arg) {
 	if(/^["'].+["']$/.test(arg)) // Strip quotes
@@ -267,7 +265,7 @@ function typepreprocess0(script, state) {
 			throw "Script modified since last preprocess";
         
         var preprocessData = JSON.parse(fs.readFileSync(preprocessDataFile));
-        if(preprocessData.length != 4)
+        if(preprocessData.length != 6)
             throw "Preprocess data corrupt";
         return preprocessData;
     } catch(e) {}
@@ -276,107 +274,155 @@ function typepreprocess0(script, state) {
     var outputFile = state[0][1];
     var outputSource = state[0][2];
     var outputLog = state[0][3];
-    var target = "ES3";
     delete state;
     
-    var includes = [];
-    var references = [];
-    var disallowAutoCompile = false;
-    var needRequire = false, needTypeinclude = false;
     // TODO: Make this read part by part, not load the entire thing into memory
     var content = fs.readFileSync(script, {encoding: "utf8"});
-    if(content.match(includereg)) {
-        needRequire = true;
-        needTypeinclude = true;
-        content = content.replace(includereg, function(match, p1, offset, string) {
-            p1 = splitArg(cleanArg(p1));
-            p1[1] = typeresolve(p1[1], classpath);
-            if(includes.indexOf(p1[1]) == -1)
-                includes.push(p1[1]);
-            if(references.indexOf(p1[1]) == -1)
-                references.push(p1[1]);
-            var preprocess = typepreprocess(p1[1], classpath, true);
-            preprocess[1].forEach(function(ref) {
-                if(references.indexOf(ref) == -1)
-                    references.push(ref);
-            });
-            preprocess[2].forEach(function(inc) {
-                if(includes.indexOf(inc) == -1)
-                    includes.push(inc);
-            });
-
-            return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\");";
-        });
-    }
-    if(content.match(referencereg)) {
-        content = content.replace(referencereg, function(match, p1, offset, string) {
-            p1 = cleanArg(p1);
-            p1 = typeresolve(p1, classpath);
-            if(references.indexOf(p1) == -1)
-                references.push(p1);
-            var preprocess = typepreprocess(p1, classpath, true);
-            preprocess[1].forEach(function(ref) {
-                if(references.indexOf(ref) == -1)
-                    references.push(ref);
-            });
-
-            return "/// <reference path=\"" + preprocess[0] + "\" />";
-        });
-    }
-    if(content.match(pluginreg)) {
-        needRequire = true;
-        needTypeinclude = true;
-        content = content.replace(pluginreg, function(match, p1, offset, string) {
-            p1 = splitArg(cleanArg(p1));
-            p1[1] = typeresolve(p1[1], classpath);
-            if(includes.indexOf(p1[1]) == -1)
-                includes.push(p1[1]);
-            if(references.indexOf(p1[1]) == -1)
-                references.push(p1[1]);
-            var preprocess = typepreprocess(p1[1], classpath, true);
-            preprocess[1].forEach(function(ref) {
-                if(references.indexOf(ref) == -1)
-                    references.push(ref);
-            });
-
-            return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude.plugin(\"" + p1[1] + "\");";
-        });
-    }
-    if(content.match(nodereqreg)) {
-        needRequire = true;
-        content = content.replace(nodereqreg, function(match, p1, offset, string) {
-            p1 = splitArg(cleanArg(p1));
-            return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
-        });
-    }
-    if(content.match(noautocompilereg)) {
-        content = content.replace(noautocompilereg, function(match, p1, offset, string) {
-            disallowAutoCompile = true;
-            return "";
-        });
-    }
-    if(content.match(targetreg)) {
-        content = content.replace(targetreg, function(match, p1, offset, string) {
-            target = p1;
-            return "";
-        });
-    }
-    if(content.match(mainreg)) {
-        content = content.replace(mainreg, function(match, p1, offset, string) {
-            return "declare var module:any;(module).exports = " + p1 + ";";
-        });
-    }
-    if(needTypeinclude)
+    var context = {
+        includes: [],
+        references: [],
+        classpath: classpath,
+        disallowAutoCompile: false,
+        needTypeinclude: false,
+        needRequire: false,
+        target: "ES3",
+        strip: false
+    };
+    var foundMacros = [];
+    content = content.replace(macroreg, function(match, p1, p2, offset, string) {
+        var macroProcessor = macros[p1];
+        if(!macroProcessor)
+            throw new Error("Unhandled macro '@" + p1 + "' in" + script);
+        
+        p2 = p2.substring(1);
+        if(macroProcessor[0] && !macroProcessor[0].test(p2))
+            throw new Error("Invalid format for macro '" + match + "'" + " in " + script);
+        
+        if(macroProcessor[1] && foundMacros.indexOf(macroProcessor) == -1) {
+            macroProcessor[1].apply(context, [context]);
+            foundMacros.push(macroProcessor);
+        }
+        
+        return macroProcessor[2].apply(context, [match, p2, context]);
+    });
+    
+    if(context.needTypeinclude)
         content = "var _typeinclude = require(\"" + __filename + "\");\n" + content;
-    if(needRequire)
+    if(context.needRequire)
         content = "declare var require:Function;\n" + content;
     content = "var __classpath = " + JSON.stringify(classpath) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
     fs.writeFileSync(outputSource, content);
     
-    var preprocessData = [outputSource, references, includes, target, disallowAutoCompile];
+    var preprocessData = [outputSource, context.references, context.includes, context.target, context.disallowAutoCompile, context.strip];
     fs.writeFileSync(preprocessDataFile, JSON.stringify(preprocessData));
     return preprocessData;
 }
+
+
+typeregistermacro("include",
+                  /^([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?)$/,
+                  function(context) {
+    context.needRequire = true;
+    context.needTypeinclude = true;
+}, function(match, p1, context) {
+    p1 = splitArg(cleanArg(p1));
+    p1[1] = typeresolve(p1[1], context.classpath);
+    if(context.includes.indexOf(p1[1]) == -1)
+        context.includes.push(p1[1]);
+    if(context.references.indexOf(p1[1]) == -1)
+        context.references.push(p1[1]);
+    var preprocess = typepreprocess(p1[1], context.classpath, true);
+    preprocess[1].forEach(function(ref) {
+        if(context.references.indexOf(ref) == -1)
+            context.references.push(ref);
+    });
+    preprocess[2].forEach(function(inc) {
+        if(context.includes.indexOf(inc) == -1)
+            context.includes.push(inc);
+    });
+
+    return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\");";
+});
+
+typeregistermacro("reference",
+                  /^([\"']?[\w\.\-\/]+[\"']?)$/,
+                  undefined, function(match, p1, context) {
+    p1 = cleanArg(p1);
+    p1 = typeresolve(p1, context.classpath);
+    if(context.references.indexOf(p1) == -1)
+        context.references.push(p1);
+    var preprocess = typepreprocess(p1, context.classpath, true);
+    preprocess[1].forEach(function(ref) {
+        if(context.references.indexOf(ref) == -1)
+            context.references.push(ref);
+    });
+
+    return "/// <reference path=\"" + preprocess[0] + "\" />";
+});
+
+typeregistermacro("plugin",
+                  /^([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?)$/,
+                  function(context) {
+    context.needRequire = true;
+    context.needTypeinclude = true;
+}, function(match, p1, context) {
+    p1 = splitArg(cleanArg(p1));
+    p1[1] = typeresolve(p1[1], context.classpath);
+    if(context.references.indexOf(p1[1]) == -1)
+        context.references.push(p1[1]);
+    var preprocess = typepreprocess(p1[1], context.classpath, true);
+    preprocess[1].forEach(function(ref) {
+        if(context.references.indexOf(ref) == -1)
+            context.references.push(ref);
+    });
+
+    return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude.plugin(\"" + p1[1] + "\");";
+});
+
+typeregistermacro("pluginfor",
+                  /^([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?)$/,
+                  undefined, function(match, p1, context) {
+    p1 = splitArg(cleanArg(p1));
+    p1[1] = typeresolve(p1[1], context.classpath);
+    if(context.references.indexOf(p1[1]) == -1)
+        context.references.push(p1[1]);
+    var preprocess = typepreprocess(p1[1], context.classpath, true);
+    preprocess[1].forEach(function(ref) {
+        if(context.references.indexOf(ref) == -1)
+            context.references.push(ref);
+    });
+
+    return "/// <reference path=\"" + preprocess[0] + "\" />";
+});
+
+typeregistermacro("nodereq",
+                  /^([\"']?\w+[\"']?|[\"']?.+[\"']?:[\"']?\w+[\"']?)$/,
+                  function(context) {
+    context.needRequire = true;
+}, function(match, p1, context) {
+    p1 = splitArg(cleanArg(p1));
+    return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
+});
+
+typeregistermacro("noautocompile", undefined, undefined,
+                  function(match, p1, context) {
+    context.disallowAutoCompile = true;
+    return "";
+});
+typeregistermacro("strip", /^(on|off|yes|no|true|false)$/i, undefined,
+                  function(match, p1, context) {
+    context.strip = /^(on|yes|true)$/i.test(p1);
+    return "";
+});
+typeregistermacro("target", /^(ES3|ES5)$/i, undefined,
+                  function(match, p1, context) {
+    context.target = p1;
+    return "";
+});
+typeregistermacro("main", /^([\"']?\w+[\"']?)$/, undefined,
+                  function(match, p1, context) {
+    return "declare var module:any;(module).exports = " + p1 + ";";
+});
 
 function typecompile0(script, state, complete, noRecursive) {
     var scriptStat = state[2];
@@ -449,7 +495,10 @@ function typecompile0(script, state, complete, noRecursive) {
             }
         };
         
-        var cmdLine = "tsc --target \"" + target + "\" --sourcemap --module \"commonjs\" --out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
+        var cmdLine = "tsc --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
+        if(context.strip)
+            cmdLine += "--removeComments ";
+        cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
         if(process.env.TYPEINCLUDE_VERBOSE)
             console.log("Running", cmdLine);
         child_process.exec(cmdLine);
@@ -588,6 +637,7 @@ function typeplugin(script, classpath) {
 typeinclude.path = typepath;
 typeinclude.preprocess = typepreprocess;
 typeinclude.autocompile = typeautocompile;
+typeinclude.registermacro = typeregistermacro;
 typeinclude.compile = typecompile;
 typeinclude.resolve = typeresolve;
 typeinclude.plugin = typeplugin;

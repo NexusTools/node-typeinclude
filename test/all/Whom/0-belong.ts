@@ -1,4 +1,4 @@
-@reference Whom
+@pluginfor Whom
 
 class Belong implements Whom {
     public to():String {

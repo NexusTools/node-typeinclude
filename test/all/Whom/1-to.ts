@@ -1,4 +1,4 @@
-@reference Whom
+@pluginfor Whom
 
 class To implements Whom {
     public to():String {

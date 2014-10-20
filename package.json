@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",
@@ -17,7 +17,11 @@
 		"nosejs",
 		"compiler",
 		"language",
-		"javascript"
+		"javascript",
+        "macros",
+        "resolve",
+        "loader",
+        "class"
 	],
 	"bugs": {
 		"url" : "https://github.com/NexusTools/node-typeinclude/issues"
