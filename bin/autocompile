@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+
+process.argv.splice(1, 1); // Remove autocompile script from arguments
+
+var typeinclude = require("typeinclude");
+typeinclude.autocompile(process.argv[1]);
