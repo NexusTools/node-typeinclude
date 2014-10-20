@@ -294,7 +294,8 @@ function typepreprocess0(script, state) {
         if(!macroProcessor)
             throw new Error("Unhandled macro '@" + p1 + "' in" + script);
         
-        p2 = p2.substring(1);
+        if(p2)
+            p2 = p2.substring(1);
         if(macroProcessor[0] && !macroProcessor[0].test(p2))
             throw new Error("Invalid format for macro '" + match + "'" + " in " + script);
         
