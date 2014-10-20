@@ -41,19 +41,95 @@ tempDirectory += path.sep + "typeinclude-cache" + path.sep;
 var baseTempDirectory = tempDirectory;
 tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
+var globalClassPath = [processDirectory];
 global.__typeinclude__loadcache__ = {};
 
+function typeclean0(directory) {
+    fs.readdirSync(directory).forEach(function(child) {
+        var fullpath = path.resolve(directory, child);
+        if(fs.lstatSync(fullpath).isDirectory())
+            typeclean0(fullpath);
+        else
+            fs.unlinkSync(fullpath);
+    });
+}
+
+function typeclean() {
+    typeclean0(tempDirectory);
+}
+
+function typeclasspath(overrides) {
+    var classPath;
+    if(overrides && overrides != ".") {
+        if((typeof overrides) == "string")
+            classPath = [overrides];
+        else
+            classPath = overrides;
+        globalClassPath.forEach(function(arg) {
+            if(classPath.indexOf(arg) == -1)
+                classPath.push(arg);
+        });
+        
+        classPath.splice(arguments.length, 0, globalClassPath);
+    } else
+        classPath = globalClassPath.slice(0); // Create a copy
+    
+    return classPath;
+}
+
+function typeaddpath(path) {
+    if(globalClassPath.indexOf(path) == -1)
+        globalClassPath.push(path);
+}
+
+function typehaspath(path) {
+    return globalClassPath.indexOf(path) != -1;
+}
+
+function typeremovepath(path) {
+    var pos = globalClassPath.indexOf(path);
+    if(pos > -1)
+        globalClassPath.splice(pos, 1);
+}
+
+var $break = new Object();
 function typeresolve(script, classpath) {
-    classpath = classpath || path.dirname(script);
+    classpath = classpath || typeclasspath();
     
-    if(classpath instanceof Array) // TODO: Implement
-        throw new Error("Arrays as classpaths not supported yet");
-    if(classpath instanceof Function) // TODO: Implement
+    if(classpath instanceof Array) {
+        if(!script.endsWith(".ts"))
+            script += ".ts";
+        
+        var foundScript;
+        try {
+            classpath.forEach(function(cpath) {
+                try {
+                    foundScript = path.resolve(cpath, script);
+                    fs.existsSync(foundScript);
+                    throw $break;
+                } catch(e) {
+                    if(e != $break)
+                        throw e;
+                }
+            });
+        } catch(e) {
+            if(e != $break)
+                throw e;
+        }
+        script = foundScript;
+        
+    } else if(classpath instanceof Function) // TODO: Implement
         throw new Error("Functions as classpaths not supported yet");
-    
-    script = path.resolve(classpath, script);
-    if(!script.endsWith(".ts"))
-        script += ".ts";
+    else if((typeof classpath) == "string") {
+        script = path.resolve(classpath, script);
+        if(!script.endsWith(".ts"))
+            script += ".ts";
+
+        // TODO: Figure out how to create a EEXIST error
+        if(!fs.existsSync(script))
+            throw new Error("No such file: " + script);
+    }
+        
     
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Resolved", script, "from", classpath);
@@ -62,13 +138,12 @@ function typeresolve(script, classpath) {
 }
 
 function typepath(script, classpath, dontResolve) {
-    if(!dontResolve) {
-        classpath = classpath || path.dirname(script);
+    if(!dontResolve)
+        classpath = classpath || typeclasspath(path.dirname(script));
+    else {
+        classpath = classpath || typeclasspath();
         script = typeresolve(script, classpath);
     }
-    // TODO: Figure out how to create a EEXIST error
-    if(!fs.existsSync(script))
-        throw new Error("No such file: " + script);
     
     try {
 		fs.mkdirSync(baseTempDirectory);
@@ -157,8 +232,6 @@ function typepreprocess0(script, state) {
             if(!p1[1].endsWith(".ts"))
                 p1[1] += ".ts";
             p1[1] = typeresolve(p1[1], classpath);
-            if(!fs.existsSync(p1[1]))
-                throw new Error("Included non-existent file: " + p1[1] + ", with classpath: " + JSON.stringify(classpath));
             if(includes.indexOf(p1[1]) == -1)
                 includes.push(p1[1]);
             if(references.indexOf(p1[1]) == -1)
@@ -183,8 +256,6 @@ function typepreprocess0(script, state) {
                 p1 += ".ts";
             
             p1 = typeresolve(p1, classpath);
-            if(!fs.existsSync(p1))
-                throw new Error("Referenced non-existent file: " + p1 + ", with classpath: " + JSON.stringify(classpath));
             if(references.indexOf(p1) == -1)
                 references.push(p1);
             var preprocess = typepreprocess(p1, classpath, true);
@@ -289,9 +360,6 @@ function typecompile0(script, state, complete, noRecursive) {
                 try {
                     fs.unlinkSync(outputFile);
                 } catch(e) {}
-                try {
-                    fs.unlinkSync(outputLog);
-                } catch(e) {}
 
                 console.error("Compile Error:", e);
                 throw new Error("Failed to compile: " + script + "\nCheck " + outputLog + " for details");
@@ -308,10 +376,12 @@ function typecompile0(script, state, complete, noRecursive) {
 }
 
 function typecompile(script, classpath, complete, dontResolve, noRecursive) {
-    classpath = classpath || path.dirname(script);
-    
     if(!dontResolve)
+        classpath = classpath || typeclasspath(path.dirname(script));
+    else {
+        classpath = classpath || typeclasspath();
         script = typeresolve(script, classpath);
+    }
     
     var waitFor = function() {};
     var path = typepath(script, undefined, true);
@@ -346,7 +416,7 @@ function typecompile(script, classpath, complete, dontResolve, noRecursive) {
 }
 
 function typepreprocess(script, classpath, dontResolve) {
-    classpath = classpath || path.dirname(script);
+    classpath = classpath || typeclasspath(path.dirname(script));
     
     if(!dontResolve)
         script = typeresolve(script, classpath);
@@ -354,8 +424,8 @@ function typepreprocess(script, classpath, dontResolve) {
     return typepreprocess0(script, state);
 }
 
-var typeinclude = function(script, classpath, ignoreCaches) {
-    classpath = classpath || path.dirname(script);
+function typeinclude(script, classpath, ignoreCaches) {
+    classpath = classpath || typeclasspath(path.dirname(script));
     
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Including", script, "from", classpath);
@@ -379,4 +449,11 @@ typeinclude.path = typepath;
 typeinclude.preprocess = typepreprocess;
 typeinclude.compile = typecompile;
 typeinclude.resolve = typeresolve;
+typeinclude.clean = typeclean;
+
+// Global Class Path
+typeinclude.classpath = typeclasspath;
+typeinclude.addclasspath = typeaddpath;
+typeinclude.hasclasspath = typehaspath;
+typeinclude.removeclasspath = typeremovepath;
 module.exports = typeinclude;
