@@ -430,6 +430,7 @@ function typecompile0(script, state, complete, noRecursive) {
     var preprocessData = typepreprocess0(script, state);
     var includes = preprocessData[2];
     var target = preprocessData[3];
+    var strip = preprocessData[4];
     delete preprocessData;
     
     var outputFolder = state[0][0];
@@ -496,7 +497,7 @@ function typecompile0(script, state, complete, noRecursive) {
         };
         
         var cmdLine = "tsc --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
-        if(context.strip)
+        if(strip)
             cmdLine += "--removeComments ";
         cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
         if(process.env.TYPEINCLUDE_VERBOSE)
