@@ -164,7 +164,8 @@ function typeresolve(script, classpath) {
                                 throw "false: " + cpath;
                             foundScript = func(script, classpath, scriptFile);
                         } catch(e) {
-                            console.error(e);
+	                        if(process.env.TYPEINCLUDE_VERBOSE)
+                                console.error(e);
                             foundScript = path.resolve(String(cpath), scriptFile);
                         }
                         if(fs.existsSync(foundScript))
