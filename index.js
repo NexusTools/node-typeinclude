@@ -572,7 +572,11 @@ function typeautocompile(directory, classpath, complete, ignoreNoAutoCompile) {
         throw new Error("Async autocompile not supported yet");
     typeautocompile0(directory, classpath, undefined, ignoreNoAutoCompile, waitFors);
     waitFors.forEach(function(waitFor) {
-        waitFor();
+        try {
+            waitFor();
+        } catch(e) {
+            // TODO: Store errors and output somewhere
+        }
     });
 }
 
