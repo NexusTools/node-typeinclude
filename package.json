@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",
@@ -37,7 +37,9 @@
 		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 10000 --require test/support/env --ui tdd --reporter spec test/"
 	},
 	"bin" : { 
-		"nodets" : "./bin/nodets" 
+		"tsc+" : "./bin/tsc+",
+		"tscac" : "./bin/tscac",
+		"nodets" : "./bin/nodets"
 	},
 	"engines" : { 
 		"node" : ">=1.0.0" 
