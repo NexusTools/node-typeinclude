@@ -33,8 +33,8 @@
 	"preferGlobal" : true,
 	"main" : "index",
 	"scripts": {
-		"test": "mocha --ui tdd --bail --require test/support/env --reporter spec --timeout 10000 --globals __typeinclude__ --check-leaks test/",
-		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 20000 --require test/support/env --ui tdd --reporter spec --globals __typeinclude__ --check-leaks test/"
+		"test": "mocha --ui tdd --bail --require test/support/env --reporter spec --timeout 10000 --globals __typeinclude__,_test --check-leaks test/",
+		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 20000 --require test/support/env --ui tdd --reporter spec --globals __typeinclude__,_test --check-leaks test/"
 	},
 	"bin" : { 
 		"tsc+" : "./bin/tsc+",
