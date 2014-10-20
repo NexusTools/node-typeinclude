@@ -549,7 +549,7 @@ function typeautocompile0(directory, classpath, asyncstate, ignoreNoAutoCompile,
     fs.readdirSync(directory).forEach(function(child) {
         var fullpath = path.resolve(directory, child);
         if(fs.lstatSync(fullpath).isDirectory())
-            typeautocompile0(fullpath);
+            typeautocompile0(fullpath, classpath, asyncstate, ignoreNoAutoCompile, waitFors);
         else if(child.endsWith(".ts")) {
             if(!ignoreNoAutoCompile) {
                 var preprocess = typepreprocess(fullpath, classpath);
