@@ -3,4 +3,5 @@
 process.argv.splice(1, 1); // Remove nodets script from arguments
 
 var typeinclude = require("typeinclude");
-typeinclude(process.argv[1]);
+var script = process.argv[1] || ".";
+typeinclude(script);

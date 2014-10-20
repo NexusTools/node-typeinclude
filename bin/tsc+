@@ -1,4 +1,11 @@
 #!/usr/bin/env node
 
+var script = process.argv[2] || ".";
+console.log("Compiling", script, "and @includes.");
 var typeinclude = require("typeinclude");
-typeinclude.compileall(process.argv[2]);
+var start = Date.now();
+var compiler = typeinclude.compile(script, process.cwd());
+compiler[1](); // Wait for
+
+console.log("Compiled to", compiler[0]);
+console.log("Took " + (Date.now() - start)/1000 + " seconds.");

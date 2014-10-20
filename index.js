@@ -492,7 +492,7 @@ function typecompile0(script, state, complete, noRecursive) {
                 } catch(e) {}
 
                 console.error("Compile Error:", e);
-                throw new Error("Failed to compile: " + script + "\nCheck " + outputLog + " for details");
+                throw new Error("Failed to compile: " + script + "\n" + fs.readFileSync(outputLog));
             }
         };
         
