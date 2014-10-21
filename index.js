@@ -210,7 +210,7 @@ function typepath(script, classpath, dontResolve) {
 			throw e;
 	}
 	try {
-		fs.mkdirSync(tempDirectory, 0755);
+		fs.mkdirSync(tempDirectory);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
@@ -221,25 +221,27 @@ function typepath(script, classpath, dontResolve) {
 	var hashDigest = shasum.digest("hex");
 	var outputFile = tempDirectory + hashDigest.substring(0, 12) + path.sep;
 	try {
-		fs.mkdirSync(outputFile, 0755);
+		fs.mkdirSync(outputFile);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
 	}
 	outputFile += hashDigest.substring(12, 80) + path.sep;
 	try {
-		fs.mkdirSync(outputFile, 0755);
+		fs.mkdirSync(outputFile);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
 	}
 	outputFile += hashDigest.substring(80) + path.sep;
 	try {
-		fs.mkdirSync(outputFile, 0755);
+		fs.mkdirSync(outputFile);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
 	}
+    if(!fs.existsSync(outputFile))
+        throw new Error("Unable to create cache directory: " + outputFile);
 	var outputFolder = outputFile;
 	outputFile += path.basename(script, '.ts');
 	var outputBase = outputFile;
@@ -493,6 +495,8 @@ function typecompile0(script, state, complete, noRecursive) {
                 } catch(e) {}
 
                 console.error("Compile Error:", e);
+                if(!fs.existsSync(outputLog))
+                    throw "No output log created";
                 throw new Error("Failed to compile: " + script + "\n" + fs.readFileSync(outputLog));
             }
         };
