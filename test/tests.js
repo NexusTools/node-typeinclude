@@ -5,7 +5,8 @@ var path = require('path');
 suite('typeinclude', function() {
 	var typeinclude;
 	test('index.js', function(){
-		typeinclude = require(path.dirname(__dirname) + path.sep + "index");
+        var topDir = path.dirname(__dirname);
+        typeinclude = require(topDir + path.sep + "index")(topDir);
 	});
 	test('clean', function(){
 		typeinclude.clean();
