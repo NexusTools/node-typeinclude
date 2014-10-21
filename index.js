@@ -204,7 +204,7 @@ function typepath(script, classpath, dontResolve) {
         script = typeresolve(script, classpath);
     
     try {
-		fs.mkdirSync(baseTempDirectory);
+		fs.mkdirSync(baseTempDirectory, 0777);
 	} catch(e) {
 		if(e.code != "EEXIST")
 			throw e;
