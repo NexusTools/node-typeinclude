@@ -2,7 +2,7 @@
 
 var script = process.argv[2] || ".";
 console.log("Compiling", script, "and @includes.");
-var typeinclude = require("typeinclude");
+var typeinclude = require("typeinclude")(process.cwd());
 var start = Date.now();
 var compiler = typeinclude.compile(script, process.cwd());
 compiler[1](); // Wait for

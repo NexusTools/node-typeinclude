@@ -2,7 +2,7 @@
 
 var where = process.argv[2] || ".";
 console.log("Compiling classes in", where, "recursively");
-var typeinclude = require("typeinclude")(process.argv[2]);
+var typeinclude = require("typeinclude")(process.cwd());
 var start = Date.now();
 typeinclude.autocompile(where);
 console.log("Took " + (Date.now() - start)/1000 + " seconds.");
