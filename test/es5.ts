@@ -4,10 +4,10 @@ class ES5Test {
     private _test:number;
     
     get test() {
-        return _test;
+        return this._test;
     }
     set test(data:number) {
-        _test = data*2;
+        this._test = data*2;
     }
 }
 
