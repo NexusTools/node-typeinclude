@@ -16,6 +16,17 @@ var specificreg = /^(.+)\:(\w+)$/;
 var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
 var macros = {};
 
+var tscPath;
+var pathParts = process.env.PATH.split(":");
+pathParts.unshift(__dirname + path.sep + "node_modules" + path.sep + "typescript" + path.sep + "bin");
+do {
+    if(pathParts.length > 0)
+        tscPath = path.resolve(pathParts.shift(), "tsc");
+    else
+        throw new Error("Cannot resolve typescript compiler...");
+} while(!fs.existsSync(tscPath));
+console.log(tscPath);
+
 function typeregistermacro(name, pattern, callback, replaceWith) {
     macros[name] = [pattern, callback, replaceWith];
 }
@@ -505,7 +516,7 @@ function typecompile0(script, state, complete, noRecursive) {
             }
         };
         
-        var cmdLine = "tsc --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
+        var cmdLine = tscPath + " --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
         if(strip)
             cmdLine += "--removeComments ";
         cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
