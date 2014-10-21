@@ -311,7 +311,7 @@ function TypeInclude(moduledir) {
             var macroProcessor = macros[p1];
             if(!macroProcessor)
                 throw new Error("Unhandled macro '@" + p1 + "' in" + script);
-
+            
             if(p2)
                 p2 = p2.substring(1);
             if(macroProcessor[0] && !macroProcessor[0].test(p2))
@@ -424,6 +424,7 @@ function TypeInclude(moduledir) {
         context.needRequire = true;
     }, function(match, p1, context) {
         p1 = splitArg(cleanArg(p1));
+        
         var searchPaths = [];
 
         var addToSearchPath = function(classpath) {
