@@ -25,7 +25,6 @@ do {
     else
         throw new Error("Cannot resolve typescript compiler...");
 } while(!fs.existsSync(tscPath));
-console.log(tscPath);
 
 function typeregistermacro(name, pattern, callback, replaceWith) {
     macros[name] = [pattern, callback, replaceWith];
@@ -52,7 +51,7 @@ tempDirectory += path.sep + "typeinclude-cache" + path.sep;
 var baseTempDirectory = tempDirectory;
 tempDirectory += process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE + path.sep;
 
-var globalClassPath = [processDirectory];
+var globalClassPath = [processDirectory, __dirname + path.sep + "node_modules"];
 global.__typeinclude__ = {
     "loadcache": {},
     "plugincache": {},
@@ -153,12 +152,13 @@ function typeremovepath(cpath) {
 }
 
 var $break = new Object();
-function typeresolve(script, classpath) {
+function typeresolve(script, classpath, noExtension) {
     classpath = classpath || typeclasspath();
+    var scriptOrig = script;
     
     if(classpath instanceof Array) {
         var scriptFile = script;
-        if(!scriptFile.endsWith(".ts"))
+        if(!noExtension && !scriptFile.endsWith(".ts"))
             scriptFile += ".ts";
         
         var foundScript;
@@ -196,12 +196,12 @@ function typeresolve(script, classpath) {
         throw new Error("Functions as classpaths not supported yet");
     else {
         script = path.resolve(String(classpath), script);
-        if(!script.endsWith(".ts"))
+        if(!noExtension && !script.endsWith(".ts"))
             script += ".ts";
     }
     
     if(!fs.existsSync(script))
-        throw new Error("No such file: " + script);
+        throw new Error("Could not resolve: " + scriptOrig + " in " + JSON.stringify(classpath));
         
 	if(process.env.TYPEINCLUDE_VERBOSE)
 		console.log("Resolved", script, "from", classpath);
@@ -419,7 +419,31 @@ typeregistermacro("nodereq",
     context.needRequire = true;
 }, function(match, p1, context) {
     p1 = splitArg(cleanArg(p1));
-    return "var " + p1[0] + ":Function = require(\"" + p1[1] + "\")";
+    var searchPaths = [];
+    
+    var addToSearchPath = function(classpath) {
+        if(classpath instanceof Array)
+            classpath.forEach(addToSearchPath);
+        else
+            searchPaths.push(classpath);
+    };
+    addToSearchPath(context.classpath);
+    
+    process.env.NODE_PATH.split(":").forEach(function(path) {
+        searchPaths.push(path);
+    });
+    var modulePath;
+    try {
+        modulePath = typeresolve(p1[1] + path.sep + "package.json", searchPaths, true);
+        var package = require(modulePath);
+        modulePath = path.resolve(path.dirname(modulePath), package.main);
+        if(!fs.existsSync(modulePath))
+            throw "Main missing";
+    } catch(e) {
+        modulePath = p1[1];
+    }
+    
+    return "var " + p1[0] + ":Function = require(\"" + modulePath + "\")";
 });
 
 typeregistermacro("noautocompile", undefined, undefined,

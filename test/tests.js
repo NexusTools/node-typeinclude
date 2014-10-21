@@ -20,6 +20,7 @@ suite('typeinclude', function() {
 	});
 	test('removeclasspath', function(){
 		typeinclude.removeclasspath(cClassPath);
+		typeinclude.removeclasspath(path.dirname(__dirname) + path.sep + "node_modules");
 	});
 	test('verify classpath', function(){
         assert.equal(typeinclude.classpath()[0], __dirname);
