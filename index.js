@@ -315,9 +315,13 @@ function typepreprocess0(script, state) {
         content = "declare var require:Function;\n" + content;
     content = "var __classpath = " + JSON.stringify(classpath) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
     fs.writeFileSync(outputSource, content);
+    if(!fs.existsSync(outputSource))
+        throw new Error("Unable to write outputSource: " + outputSource);
     
     var preprocessData = [outputSource, context.references, context.includes, context.target, context.disallowAutoCompile, context.strip];
     fs.writeFileSync(preprocessDataFile, JSON.stringify(preprocessData));
+    if(!fs.existsSync(preprocessDataFile))
+        throw new Error("Unable to write preprocessData: " + preprocessDataFile);
     return preprocessData;
 }
 
