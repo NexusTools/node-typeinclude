@@ -8,6 +8,10 @@ node-typeinclude makes it easy to include typescript files into your nodejs proj
 npm install -g typeinclude
 ```
 
+[wiki](https://github.com/NexusTools/node-typeinclude/wiki)
+-----------------------------------------------------------
+We try to keep the [wiki](https://github.com/NexusTools/node-typeinclude/wiki) updated and cover as much as thoroughly as possible, so check it out for examples. But if we did miss something you think's important, please [tell us about it](https://github.com/NexusTools/node-typeinclude/issues/new).
+
 class loading
 -------------
 node-typeinclude allows you @include typescript classes from the top of typescript files
