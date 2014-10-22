@@ -23,7 +23,7 @@ usage
 -----
 ```
 var path = require("path");
-var typeinclude = require("typeinclude");
+var typeinclude = require("typeinclude")(__dirname/*Path to module's root, with the package.json*/);
 var myTypeScriptClass = typeinclude("myTypeScriptClass.ts", __dirname + path.sep + "folder with typescript relative to current file");
 myTypeScriptClass.someMethod();
 ```
