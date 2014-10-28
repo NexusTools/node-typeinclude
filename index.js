@@ -435,9 +435,10 @@ function TypeInclude(moduledir) {
         };
         addToSearchPath(context.classpath);
 
-        process.env.NODE_PATH.split(":").forEach(function(path) {
-            searchPaths.push(path);
-        });
+        if(process.env.NODE_PATH)
+            process.env.NODE_PATH.split(":").forEach(function(path) {
+                searchPaths.push(path);
+            });
         var modulePath;
         try {
             modulePath = typeresolve(p1[1] + path.sep + "package.json", searchPaths, true);
