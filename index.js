@@ -15,13 +15,13 @@ var fs = require('fs');
 var os = require('os');
 
 // Load other classes
-var paths = require(path.resolve(__dirname, "paths.js"));
+var paths = require("node-paths");
 var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
                    "util", "zlib", "crypto", "cluster", "domain", "events", "vm",
                   "punycode", "readline", "string_decoder", "tls", "dgram"];
 
 // Initialize basics
-var topDir = path.dirname(__dirname);
+var topDir = __dirname;
 var version = require(path.resolve(topDir, 'package.json')).version;
 var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;

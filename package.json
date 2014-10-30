@@ -31,7 +31,7 @@
 		"url" : "https://github.com/NexusTools/node-typeinclude.git"  
 	},
 	"preferGlobal" : true,
-	"main" : "./lib/typeinclude.js",
+	"main" : "index.js",
 	"scripts": {
 		"test": "mocha --bail --require ./test/support/env --reporter spec --timeout 10000 --globals __typeinclude__ --check-leaks test/",
 		"test-coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --timeout 20000 --require test/support/env --bail --reporter spec --globals __typeinclude__ --check-leaks test/",
@@ -50,6 +50,7 @@
 		"typescript" : "latest",
 		"string.prototype.endswith": "latest",
 		"string.prototype.startswith": "latest",
+        "node-paths": "latest",
 		"underscore": "latest",
 		"mkdirp": "latest",
 		"sleep": "latest"
