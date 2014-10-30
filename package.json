@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.4.5",
+	"version": "0.4.6",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",
@@ -46,6 +46,7 @@
 		"node" : ">=1.0.0" 
 	},
 	"dependencies": {
+        "cli-color": "latest",
 		"typescript" : "latest",
 		"string.prototype.endswith": "latest",
 		"string.prototype.startswith": "latest",
