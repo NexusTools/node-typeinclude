@@ -1,0 +1,3 @@
+interface Horse {
+	public yellow();
+}

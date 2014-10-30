@@ -1,0 +1,7 @@
+{
+    "name": "testsource",
+    "description": "Test source package for typeinclude",
+    "typemain": "lib/main",
+    "typesource": "lib",
+    "private": true
+}
