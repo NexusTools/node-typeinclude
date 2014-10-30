@@ -65,6 +65,9 @@ describe('api', function() {
             cNodePath = typeinclude.nodepath().at(0);
             assert.equal(typeinclude.hasnodepath(cNodePath), true);
         });
+        it('resolve \"mkdirp\"', function(){
+            require(typeinclude.resolvenode("underscore"));
+        });
         it('resolve \"underscore\"', function(){
             require(typeinclude.resolvenode("underscore"));
         });

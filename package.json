@@ -50,6 +50,7 @@
 		"string.prototype.endswith": "latest",
 		"string.prototype.startswith": "latest",
 		"underscore": "latest",
+		"mkdirp": "latest",
 		"sleep": "latest"
 	},
 	"devDependencies": {
