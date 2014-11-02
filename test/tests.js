@@ -18,6 +18,8 @@ it("require main", function(){
 });
 var typeinclude;
 it('create instance', function(){
+    if(!/\//.test(topDir))
+        topDir += "/";
     typeinclude = _ti(topDir);
 });
 describe('api', function() {
@@ -39,25 +41,9 @@ describe('api', function() {
         it('verify', function(){
             assert.equal(typeinclude.classpath().at(0), __dirname);
         });
-
         it('resolve', function(){
             assert.equal(typeinclude.resolve("include"), path.resolve(__dirname, "include.ts"));
         });
-        
-        
-    
-        
-        it('use function'/*, function(){
-            typeinclude.addclasspath(function(script, classpath, scriptFile) {
-                return path.resolve(__dirname, scriptFile);
-            });
-            typeinclude.removeclasspath(__dirname);
-            assert.equal(typeinclude.classpath().length, 1);
-        }*/);
-
-        it('resolve again'/*, function(){
-            assert.equal(typeinclude.resolve("include"), __dirname + path.sep + "include.ts");
-        }*/);
     });
     describe('nodepath', function() {
         var cNodePath;
@@ -65,18 +51,21 @@ describe('api', function() {
             cNodePath = typeinclude.nodepath().at(0);
             assert.equal(typeinclude.hasnodepath(cNodePath), true);
         });
-        it('resolve \"mkdirp\"', function(){
+        it('resolve/require \"mkdirp\"', function(){
             require(typeinclude.resolvenode("underscore"));
         });
-        it('resolve \"underscore\"', function(){
+        it('resolve/require \"underscore\"', function(){
             require(typeinclude.resolvenode("underscore"));
         });
-        it('resolve \"typescript\"', function(){
+        it('resolve \"typescript\" and tsc', function(){
             typeinclude.resolvenode("typescript");
             typeinclude.resolvenode("typescript/bin/tsc");
         });
-        it('resolve \"sleep\"', function(){
-            require(typeinclude.resolvenode("sleep"));
+        it('resolve/require \"sleep\"', function(){
+            var path = typeinclude.resolvenode("sleep");
+            process.env.NODE_PATH = "";
+            assert.equal(typeinclude.require("sleep"), require(path));
+            
         });
     });
 	describe('tsc + preprocessor', function() {

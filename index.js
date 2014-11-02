@@ -22,15 +22,11 @@ var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
 
 // Initialize basics
 var topDir = __dirname;
+var __nodePath = paths.sys.node.clone();
 var version = require(path.resolve(topDir, 'package.json')).version;
 var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 var hasExtension = /\.(\w+)$/;
-
-// Parse NODE_PATH
-var __nodePath = new paths();
-if(process.env.NODE_PATH)
-    __nodePath.add(process.env.NODE_PATH.split(":"));
 
 // Resolve local paths
 var parentDir;
@@ -587,12 +583,19 @@ function TypeInclude(moduledir) {
         classpath = classPath.get(classpath || path.dirname(script));
 
         if(process.env.TYPEINCLUDE_VERBOSE)
-            console.log("Including", script, "from", classpath);
-        if(!script || script == "." || script == "./")
-            script = addDotTS(path.resolve(moduledir, pkg.typemain));
-        else
-            script = classpath.resolve(script);
+            console.log("Resolving", script, "from", classpath);
+        try {
+            if(!script || script == "." || script == "./")
+                script = addDotTS(path.resolve(moduledir, pkg.typemain));
+            else
+                script = classpath.resolve(script);
+        } catch(e) {
+            console.dir(e);
+            throw e;
+        }
 
+        if(process.env.TYPEINCLUDE_VERBOSE)
+            console.log("Resolved", script);
         if(!ignoreCaches && script in global.__typeinclude__.loadcache)
             return global.__typeinclude__.loadcache[script];
 
