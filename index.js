@@ -113,9 +113,9 @@ function _ti(topDir, classPath) {
     if(topDir in global.__typeinclude__.modulecache)
         return global.__typeinclude__.modulecache[topDir];
     
-    var instance = new TypeInclude(topDir, classPath);
+    var instance = new TypeInclude(topDir);
     if(classPath)
-        instance.add(classPath);
+        instance.addclasspath(classPath);
     
     var instanceFunc = function() {
         return instance.include.apply(instance, arguments);

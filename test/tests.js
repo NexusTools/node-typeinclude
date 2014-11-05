@@ -18,9 +18,7 @@ it("require main", function(){
 });
 var typeinclude;
 it('create instance', function(){
-    if(!/\//.test(topDir))
-        topDir += "/";
-    typeinclude = _ti(topDir);
+    typeinclude = _ti(topDir + "/");
 });
 describe('api', function() {
 	it('clean', function(){
@@ -63,9 +61,7 @@ describe('api', function() {
         });
         it('resolve/require \"sleep\"', function(){
             var path = typeinclude.resolvenode("sleep");
-            process.env.NODE_PATH = "";
             assert.equal(typeinclude.require("sleep"), require(path));
-            
         });
     });
 	describe('tsc + preprocessor', function() {
@@ -165,5 +161,8 @@ describe('coverage', function() {
                 throw e;
         }
     });
+	it('clean last', function(){
+		typeinclude.clean();
+	});
 
 });
