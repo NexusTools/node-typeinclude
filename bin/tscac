@@ -46,6 +46,7 @@ function updateState(file, state) {
     
     states[pos] = state;
     writeState();
+    return true;
 }
 
 var start = Date.now();
