@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.5.4",
+	"version": "0.5.5",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",
@@ -33,9 +33,9 @@
 	"preferGlobal" : true,
 	"main" : "index.js",
 	"scripts": {
-		"test": "mocha --bail --require ./test/support/env --reporter spec --timeout 20000 test/",
-		"test-coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --timeout 20000 --require test/support/env --bail --reporter spec test/",
-		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 20000 --require test/support/env --reporter spec test/"
+		"test": "mocha --bail --require ./test/support/env --reporter spec --timeout 20000 --globals __typeinclude__ --check-leaks test/",
+		"test-coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --timeout 20000 --globals __typeinclude__ --check-leaks --require test/support/env --bail --reporter spec test/",
+		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 20000 --globals __typeinclude__ --check-leaks --require test/support/env --reporter spec test/"
 	},
 	"bin" : { 
 		"tsc+" : "./bin/tsc+",
@@ -47,7 +47,7 @@
 	},
 	"dependencies": {
         "cli-color": "latest",
-		"nulllogger": ">=0.0.6",
+		"nulllogger": ">=0.0.8",
 		"typescript" : "latest",
         "node-paths": ">=0.1.7",
 		"underscore": "latest",
