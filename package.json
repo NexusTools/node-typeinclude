@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",

@@ -5,14 +5,24 @@ var pkg = require(path.resolve(__dirname, 'package.json'));
 
 var usleep = require("sleep").usleep;
 var child_process = require("child_process");
-var logger = require("nulllogger");
 var crypto = require('crypto');
 var mkdirp = require("mkdirp");
 var _ = require('underscore');
 var fs = require('fs');
 var os = require('os');
 
-logger = new logger("typeinclude");
+
+var logger;
+try {
+    logger = require("nulllogger");
+    logger = new logger("typeinclude");
+} catch(e) {
+    // Logging typeinclude isn't super important
+    logger = {
+        gears: _.noop,
+        error: _.noop
+    };
+}
 
 // Load other classes
 var paths = require("node-paths");

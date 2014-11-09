@@ -1,13 +1,24 @@
 #!/usr/bin/env node
 var startNow = Date.now();
 var path = require("path");
-var logger = require("logger")("typeinclude");
 var cli = require("cli-color");
 var typeinclude;
 try {
     typeinclude = require("/usr/local/lib/node_modules/typeinclude")(process.cwd());
 } catch(e) {
     typeinclude = require("typeinclude")(process.cwd());
+}
+
+var logger;
+try {
+    logger = require("nulllogger");
+    logger = new logger("typeinclude");
+} catch(e) {
+    // Logging typeinclude isn't super important
+    logger = {
+        gears: _.noop,
+        error: _.noop
+    };
 }
 
 var states = [];
