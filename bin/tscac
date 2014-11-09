@@ -19,8 +19,7 @@ try {
 } catch(e) {
     // Logging typeinclude isn't super important
     logger = {
-        gears: _.noop,
-        error: _.noop
+        info: console.log
     };
 }
 
@@ -41,7 +40,7 @@ function updateState(file, state) {
         pos = entries.length;
         entries.push(file);
     }
-    if(states[pos] > state)
+    if(states[pos] >= state)
         return;
     
     states[pos] = state;
@@ -52,7 +51,7 @@ function updateState(file, state) {
 var start = Date.now();
 var stats = [0, 0, 0, 0];
 var where = path.resolve(process.cwd(), process.argv[2] || (require(path.resolve(process.cwd(), "package.json")).typesource || "."));
-logger.info("Scanning", cli.white("`" + where + "`"));
+logger.info("Compiling typescript files in", cli.white("`" + where + "`"));
 typeinclude.registerverbose({
     discovered: function(script) {
         if(updateState(script, 0))
