@@ -14,7 +14,7 @@ try {
     logger = require("nulllogger");
     logger = new logger("typeinclude");
     
-    if(!logger.gears || !logger.error)
+    if(!logger.info)
         throw "Bad implementation";
 } catch(e) {
     // Logging typeinclude isn't super important
@@ -39,6 +39,7 @@ function updateState(file, state) {
     if(pos == -1) {
         pos = entries.length;
         entries.push(file);
+        stats[0]++;
     }
     if(states[pos] >= state)
         return;
@@ -54,8 +55,7 @@ var where = path.resolve(process.cwd(), process.argv[2] || (require(path.resolve
 logger.info("Compiling typescript files in", cli.white("`" + where + "`"));
 typeinclude.registerverbose({
     discovered: function(script) {
-        if(updateState(script, 0))
-            stats[0]++;
+        updateState(script, 0);
     },
     preprocessing: function(script) {
         updateState(script, 1);
