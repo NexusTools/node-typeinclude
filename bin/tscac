@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 var startNow = Date.now();
 var path = require("path");
+var logger = require("logger")("typeinclude");
 var cli = require("cli-color");
 var typeinclude;
 try {
@@ -9,32 +10,11 @@ try {
     typeinclude = require("typeinclude")(process.cwd());
 }
 
-function elapsed() {
-    var elapsed = (Date.now() - startNow);
-    var tim = String(elapsed%1000);
-    while(tim.length < 3)
-        tim = "0" + tim;
-    tim = (elapsed = Math.floor(elapsed/1000))%60 + "." + tim;
-    while(tim.length < 6)
-        tim = "0" + tim;
-    tim = (elapsed = Math.floor(elapsed/60))%60 + ":" + tim;
-    while(tim.length < 9)
-        tim = "0" + tim;
-    tim = (elapsed = Math.floor(elapsed/60))%60 + ":" + tim;
-    while(tim.length < 12)
-        tim = "0" + tim;
-    tim = (elapsed = Math.floor(elapsed/24))%24 + " " + tim;
-    while(tim.length < 15)
-        tim = "0" + tim;
-    return cli.white(tim);
-}
-
 var states = [];
 var entries = [];
 var colors = [cli.whiteBright, cli.yellow, cli.yellowBright, cli.green, cli.greenBright, cli.redBright];
 
 function writeState() {
-    process.stdout.write(elapsed());
     process.stdout.write("\t\t");
     states.forEach(function(state) {
         process.stdout.write(colors[state]("•"));
@@ -47,7 +27,7 @@ function updateState(file, state) {
         pos = entries.length;
         entries.push(file);
     }
-    if(states[pos] == state)
+    if(states[pos] > state)
         return;
     
     states[pos] = state;
@@ -57,40 +37,41 @@ function updateState(file, state) {
 var start = Date.now();
 var stats = [0, 0, 0, 0];
 var where = path.resolve(process.cwd(), process.argv[2] || (require(path.resolve(process.cwd(), "package.json")).typesource || "."));
-console.log(elapsed(), "Scanning", cli.white("`" + where + "`"));
+logger.info("Scanning", cli.white("`" + where + "`"));
 typeinclude.registerverbose({
     discovered: function(script) {
-        updateState(script, 0);
-        stats[0]++;
+        if(updateState(script, 0))
+            stats[0]++;
     },
     preprocessing: function(script) {
         updateState(script, 1);
     },
     preprocessed: function(script) {
-        updateState(script, 2);
-        stats[1]++;
+        if(updateState(script, 2))
+            stats[1]++;
     },
     compiling: function(script) {
         updateState(script, 3);
     },
     compiled: function(script) {
-        updateState(script, 4);
-        stats[2]++;
+        if(updateState(script, 4))
+            stats[2]++;
     },
     error: function(script) {
-        updateState(script, 5);
-        stats[3]++;
+        if(updateState(script, 5))
+            stats[3]++;
     }
 });
 console.log();
 console.log();
+
 typeinclude.autocompile(where);
 
 console.log();
 console.log();
 console.log();
-console.log(elapsed(), "Took " + (Date.now() - start)/1000 + " seconds.");
-console.log(elapsed(), colors[0](stats[0]), "files discovered");
-console.log(elapsed(), colors[2](stats[1]), "files processed");
-console.log(elapsed(), colors[4](stats[2]), "files compiled");
-console.log(elapsed(), colors[5](stats[3]), "errors");
+logger.info("Took " + (Date.now() - start)/1000 + " seconds.");
+logger.info(colors[0](stats[0]), "files discovered");
+logger.info(colors[2](stats[1]), "files processed");
+logger.info(colors[4](stats[2]), "files compiled");
+logger.info(colors[5](stats[3]), "errors");

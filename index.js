@@ -1,18 +1,20 @@
 if(require.main === module)
     throw new Error("typeinclude is a library and has no runnable functionality");
-
-// Load dependencies
-require('string.prototype.startswith');
-require('string.prototype.endswith');
+var path = require('path');
+var pkg = require(path.resolve(__dirname, 'package.json'));
 
 var usleep = require("sleep").usleep;
 var child_process = require("child_process");
+var logger = require("nulllogger");
 var crypto = require('crypto');
 var mkdirp = require("mkdirp");
 var _ = require('underscore');
-var path = require('path');
 var fs = require('fs');
 var os = require('os');
+
+console.log(logger);
+logger = new logger("typeinclude");
+console.log(logger);
 
 // Load other classes
 var paths = require("node-paths");
@@ -21,16 +23,15 @@ var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
                   "punycode", "readline", "string_decoder", "tls", "dgram"];
 
 // Initialize basics
-var topDir = __dirname;
 var __nodePath = paths.sys.node.clone();
-var version = require(path.resolve(topDir, 'package.json')).version;
+var version = pkg.version;
 var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 var hasExtension = /\.(\w+)$/;
 
 // Resolve local paths
 var parentDir;
-var start = topDir;
+var start = __dirname;
 if(path.basename(parentDir = path.dirname(start)) == "node_modules") {
     start = parentDir;
     while(path.basename(parentDir = path.dirname(path.dirname(start))) == "node_modules") {
@@ -58,7 +59,7 @@ var scanModules = function(dir) {
     if(hasValidModules)
         __nodePath.add(dir);
 };
-if(start == topDir)
+if(start == __dirname)
     scanModule(start, true);
 else
     scanModules(start);
@@ -143,8 +144,7 @@ function TypeInclude(moduledir) {
     try {
         pkg = require(path.resolve(moduledir, "package.json"));
     } catch(e) {
-        if(process.env.TYPEINCLUDE_VERBOSE)
-            console.error("typeinclude requires the path to a folder with a valid package.json");
+        logger.error("typeinclude requires the path to a folder with a valid package.json");
         throw e;
     }
     var verbose = {
@@ -465,8 +465,7 @@ function TypeInclude(moduledir) {
                         fs.unlinkSync(outputFile);
                     } catch(e) {}
 
-                    if(process.env.TYPEINCLUDE_VERBOSE)
-                        console.error("Compile Error:", e);
+                    logger.error("Compile Error:", e);
                     if(!fs.existsSync(outputLog))
                         throw new Error("No output log created: " + outputLog);
                     throw new Error("Cannot compile `" + script + "`\n" + fs.readFileSync(outputLog));
@@ -477,8 +476,7 @@ function TypeInclude(moduledir) {
             if(strip)
                 cmdLine += "--removeComments ";
             cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
-            if(process.env.TYPEINCLUDE_VERBOSE)
-                console.log("Running", cmdLine);
+            logger.gears("Running", cmdLine);
             child_process.exec(cmdLine);
         }
 
@@ -504,19 +502,10 @@ function TypeInclude(moduledir) {
                     throw "Compiled using V" + cVer + " of typeinclude, now V" + version;
                 verbose.compiled(script, classpath);
             } catch(e) {
-                if(process.env.TYPEINCLUDE_VERBOSE)
-                    console.error(e);
-
                 var state = [tpath, classpath, scriptStat];
                 try {
                     waitFor = typecompile0(script, [tpath, classpath, scriptStat], complete, noRecursive);
                 } catch(e) {
-                    if(process.env.TYPEINCLUDE_VERBOSE) {
-                        console.error(e);
-                        try {
-                            console.dir(e);
-                        } catch(e) {}
-                    }
                     throw e;
                 }
             }
@@ -582,28 +571,24 @@ function TypeInclude(moduledir) {
     var typeinclude = function(script, classpath, ignoreCaches) {
         classpath = classPath.get(classpath || path.dirname(script));
 
-        if(process.env.TYPEINCLUDE_VERBOSE)
-            console.log("Resolving", script, "from", classpath);
+        logger.gears("Resolving", script, "from", classpath);
         try {
             if(!script || script == "." || script == "./")
                 script = addDotTS(path.resolve(moduledir, pkg.typemain));
             else
                 script = classpath.resolve(script);
         } catch(e) {
-            console.dir(e);
             throw e;
         }
 
-        if(process.env.TYPEINCLUDE_VERBOSE)
-            console.log("Resolved", script);
+        logger.gears("Resolved", script);
         if(!ignoreCaches && script in global.__typeinclude__.loadcache)
             return global.__typeinclude__.loadcache[script];
 
         var compiler = typecompile(script, classpath, undefined, true);
         compiler[1]();
 
-        if(process.env.TYPEINCLUDE_VERBOSE)
-            console.log("Requiring", compiler[0]);
+        logger.gears("Requiring", compiler[0]);
         var requireInstance = require(compiler[0]);
         if(!ignoreCaches)
             global.__typeinclude__.loadcache[script] = requireInstance;
@@ -613,8 +598,7 @@ function TypeInclude(moduledir) {
     var typeplugin = function(script, classpath) {
         classpath = classPath.get(classpath || path.dirname(script));
 
-        if(process.env.TYPEINCLUDE_VERBOSE)
-            console.log("Loading Plugin", script, "from", classpath);
+        logger.gears("Loading Plugin", script, "from", classpath);
         script = classpath.resolve(script);
 
         if(script in global.__typeinclude__.plugincache)
@@ -635,8 +619,7 @@ function TypeInclude(moduledir) {
                 var pluginImpl = typeinclude(path.resolve(plugin.storage, file), classpath);
                 plugin.impls.push(new pluginImpl());
             } catch(e) {
-                if(process.env.TYPEINCLUDE_VERBOSE)
-                    console.error(e);
+                logger.error(e);
                 plugin.errors.push(e);
             }
         });
