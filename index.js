@@ -12,9 +12,7 @@ var _ = require('underscore');
 var fs = require('fs');
 var os = require('os');
 
-console.log(logger);
 logger = new logger("typeinclude");
-console.log(logger);
 
 // Load other classes
 var paths = require("node-paths");
@@ -47,9 +45,10 @@ var scanModule = function(dir, skipTest) {
     } catch(e) {}
 };
 var scanModules = function(dir) {
+    var startPeriod = /^\./;
     var hasValidModules = false;
     fs.readdirSync(dir).forEach(function(child) {
-        if(child.startsWith("."))
+        if(startPeriod.test(child))
             return;
         try {
             scanModule(path.resolve(dir, child));
@@ -123,9 +122,6 @@ function _ti(topDir, classPath) {
     }
     
     for(var key in instance) {
-        if(key.startsWith("_"))
-            continue;
-        
         var val = instance[key];
         if(_.isFunction(val))
             instanceFunc[key] = val;
