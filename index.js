@@ -16,6 +16,9 @@ var logger;
 try {
     logger = require("nulllogger");
     logger = new logger("typeinclude");
+    
+    if(!logger.gears || !logger.error)
+        throw "Bad implementation";
 } catch(e) {
     // Logging typeinclude isn't super important
     logger = {
@@ -116,9 +119,11 @@ if(!("__typeinclude__" in global)) {
     };
 }
 
+var endsWithSlash = /\/$/;
 function _ti(topDir, classPath) {
     topDir = path.normalize(topDir);
-    if(topDir.endsWith("/"))
+    
+    if(endsWithSlash.test(topDir))
         topDir = topDir.substring(0, topDir.length-1);
     if(topDir in global.__typeinclude__.modulecache)
         return global.__typeinclude__.modulecache[topDir];
@@ -145,6 +150,8 @@ function addDotTS(script) {
         script += ".ts";
     return script;
 };
+var endsWithJS = /\.js$/;
+var endsWithTS = /\.ts$/;
 function TypeInclude(moduledir) {
     var pkg;
     try {
@@ -372,7 +379,7 @@ function TypeInclude(moduledir) {
         	var modulePath = nodePath.resolve(p1[1] + path.sep + "package.json");
 		    var package = require(modulePath);
 		    var main = package.main || "index.js";
-		    if(!main.endsWith(".js"))
+		    if(!endsWithJS.test(main))
 		    	main += ".js";
 		    
 		    modulePath = path.resolve(path.dirname(modulePath), main);
@@ -530,7 +537,7 @@ function TypeInclude(moduledir) {
             var fullpath = path.resolve(directory, child);
             if(fs.lstatSync(fullpath).isDirectory())
                 typeautocompile0(fullpath, classpath, asyncstate, ignoreNoAutoCompile, waitFors);
-            else if(child.endsWith(".ts")) {
+            else if(endsWithTS.test(child)) {
                 verbose.discovered(fullpath, classpath);
                 try {
                     if(!ignoreNoAutoCompile) {
@@ -668,7 +675,7 @@ function TypeInclude(moduledir) {
         var modulePath = nodePath.resolve(module + path.sep + "package.json");
         var package = require(modulePath);
         var main = package.main || "index.js";
-        if(!main.endsWith(".js"))
+        if(!endsWithJS.test(main))
             main += ".js";
 
         modulePath = path.resolve(path.dirname(modulePath), main);

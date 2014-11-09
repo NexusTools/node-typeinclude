@@ -13,6 +13,9 @@ var logger;
 try {
     logger = require("nulllogger");
     logger = new logger("typeinclude");
+    
+    if(!logger.gears || !logger.error)
+        throw "Bad implementation";
 } catch(e) {
     // Logging typeinclude isn't super important
     logger = {
