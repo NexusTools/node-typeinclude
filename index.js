@@ -105,7 +105,8 @@ cleandir = function(directory) {
 var processDirectory = path.dirname(process.argv[1]);
 var baseTempDirectory = os.tmpdir();
 baseTempDirectory += path.sep + "typeinclude-cache" + path.sep;
-baseTempDirectory += (process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid()) + path.sep;
+if(process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid)
+	baseTempDirectory += (process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid()) + path.sep;
 
 var $break = new Object();
 if(!("__typeinclude__" in global)) {
