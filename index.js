@@ -11,11 +11,10 @@ var _ = require('underscore');
 var fs = require('fs');
 var os = require('os');
 
-
 var logger;
 try {
     logger = require("nulllogger");
-    logger = new logger("typeinclude");
+    logger = new logger("e:typeinclude");
     
     if(!logger.gears || !logger.error)
         throw "Bad implementation";
@@ -27,6 +26,9 @@ try {
     };
 }
 
+if(process.env.NO_HEAVY_LIFTING = process.env.NO_HEAVY_LIFTING || /^win/.test(process.platform))
+	logger.warn("Disabling multi-process compilation");
+
 // Load other classes
 var paths = require("node-paths");
 var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
@@ -34,47 +36,52 @@ var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
                   "punycode", "readline", "string_decoder", "tls", "dgram"];
 
 // Initialize basics
-var __nodePath = paths.sys.node.clone();
 var version = pkg.version;
+var __nodePath = paths.sys.node.clone();
 var macroreg = /^@(\w+)(\s.+?)?;?(\/\/.+|\/\*.+)?$/gm;
 var specificreg = /^(.+)\:(\w+)$/;
 var hasExtension = /\.(\w+)$/;
 
 // Resolve local paths
-var parentDir;
-var start = __dirname;
-if(path.basename(parentDir = path.dirname(start)) == "node_modules") {
-    start = parentDir;
-    while(path.basename(parentDir = path.dirname(path.dirname(start))) == "node_modules") {
-        start = parentDir;
-    }
-}
-var scanModule = function(dir, skipTest) {
+var scanModule = function(dir, skipTest, nodePath) {
     if(!skipTest && !_.isObject(require(path.resolve(dir, "package.json"))))
         throw "package.json corrupt";
 
     try {
-        scanModules(path.resolve(dir, "node_modules"));
+        scanModules(path.resolve(dir, "node_modules"), nodePath);
     } catch(e) {}
 };
-var scanModules = function(dir) {
-    var startPeriod = /^\./;
-    var hasValidModules = false;
-    fs.readdirSync(dir).forEach(function(child) {
-        if(startPeriod.test(child))
-            return;
-        try {
-            scanModule(path.resolve(dir, child));
-            hasValidModules = true;
-        } catch(e) {}
-    });
-    if(hasValidModules)
-        __nodePath.add(dir);
+var scanModules = function(dir, nodePath) {
+	if(nodePath.has(dir))
+		return;
+
+	var hasValidModules = false;
+	fs.readdirSync(dir).forEach(function(child) {
+		try {
+			scanModule(path.resolve(dir, child), false, nodePath);
+			hasValidModules = true;
+		} catch(e) {}
+	});
+	if(hasValidModules)
+		nodePath.add(dir);
 };
-if(start == __dirname)
-    scanModule(start, true);
-else
-    scanModules(start);
+var scanPackage = function(start, nodePath) {
+	var parentDir;
+	var rstart = start;
+	if(path.basename(parentDir = path.dirname(start)) == "node_modules") {
+		start = parentDir;
+		while(path.basename(parentDir = path.dirname(path.dirname(start))) == "node_modules") {
+			start = parentDir;
+		}
+	}
+	logger.gears("Scanning package", start, rstart);
+	if(start == rstart)
+		scanModule(start, true, nodePath);
+	else
+		scanModules(start, nodePath);
+	logger.debug("Scanned package", start, nodePath);
+}
+scanPackage(__dirname, __nodePath);
 
 function cleanArg(arg) {
 	if(/^["'].+["']$/.test(arg)) // Strip quotes
@@ -170,6 +177,7 @@ function TypeInclude(moduledir) {
         error: _.identity
     };
     var nodePath = new paths(__nodePath);
+	scanPackage(moduledir, nodePath);
     
     var registerverbose = function(_verbose) {
         _.extend(verbose, _verbose);
@@ -492,6 +500,11 @@ function TypeInclude(moduledir) {
             cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
             logger.gears("Running", cmdLine);
             child_process.exec(cmdLine);
+			
+			if(process.env.NO_HEAVY_LIFTING) {
+				waitFor();
+				waitFor = function() {}
+			}
         }
 
         return waitFor;
