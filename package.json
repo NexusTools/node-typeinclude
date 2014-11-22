@@ -50,7 +50,7 @@
 		"nulllogger": ">=0.2.0",
 		"typescript" : "latest",
         "node-paths": ">=0.1.7",
-		"underscore": "latest",
+		"lodash": "latest",
 		"mkdirp": "latest",
 		"sleep": "latest"
 	},
