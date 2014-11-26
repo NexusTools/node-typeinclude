@@ -7,7 +7,7 @@ var usleep = require("sleep").usleep;
 var child_process = require("child_process");
 var crypto = require('crypto');
 var mkdirp = require("mkdirp");
-var _ = require('underscore');
+var _ = require('lodash');
 var fs = require('fs');
 var os = require('os');
 

@@ -50,10 +50,10 @@ describe('api', function() {
             assert.equal(typeinclude.hasnodepath(cNodePath), true);
         });
         it('resolve/require \"mkdirp\"', function(){
-            require(typeinclude.resolvenode("underscore"));
+            require(typeinclude.resolvenode("lodash"));
         });
-        it('resolve/require \"underscore\"', function(){
-            require(typeinclude.resolvenode("underscore"));
+        it('resolve/require \"lodash\"', function(){
+            require(typeinclude.resolvenode("lodash"));
         });
         it('resolve \"typescript\" and tsc', function(){
             typeinclude.resolvenode("typescript");
