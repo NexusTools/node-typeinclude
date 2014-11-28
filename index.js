@@ -384,6 +384,7 @@ function TypeInclude(moduledir) {
             return "var " + p1[0] + ":Function = require(" + JSON.stringify(p1[1]) + ")";
         }
         
+            context.needTypeinclude = true;
         try {
         	var modulePath = nodePath.resolve(p1[1] + path.sep + "package.json");
 		    var package = require(modulePath);
@@ -394,10 +395,9 @@ function TypeInclude(moduledir) {
 		    modulePath = path.resolve(path.dirname(modulePath), main);
 		    if(!fs.existsSync(modulePath))
 		        throw new Error("Main missing `" + modulePath + "`");
-            context.needRequire = true;
-            return "var " + p1[0] + ":Function = require(" + JSON.stringify(modulePath) + ")";
+            
+            return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(modulePath) + ")";
         } catch(e) {
-            context.needTypeinclude = true;
             return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(p1[1]) + ")";
         }
     });
@@ -681,21 +681,19 @@ function TypeInclude(moduledir) {
     this.hasnodepath = _.bind(nodePath.has, nodePath);
     this.clearnodepath = _.bind(nodePath.clear, nodePath);
     this.removenodepath = _.bind(nodePath.remove, nodePath);
-    this.require = function(module) {
+    this.require = function(module, cachedModulePath) {
         try {
             return require(module);
         } catch(e) {}
+        if(cachedModulePath)
+            try {
+                return require(cachedModulePath);
+            } catch(e) {}
         
         var modulePath = nodePath.resolve(module + path.sep + "package.json");
         var package = require(modulePath);
-        var main = package.main || "index.js";
-        if(!endsWithJS.test(main))
-            main += ".js";
-
-        modulePath = path.resolve(path.dirname(modulePath), main);
-        if(!fs.existsSync(modulePath))
-            throw new Error("Main missing `" + modulePath + "`");
-        module = modulePath;
+        
+        return require(path.dirname(modulePath));
     }
 };
 
