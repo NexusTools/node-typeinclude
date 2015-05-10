@@ -35,6 +35,8 @@ var nodeModules = ["os", "fs", "path", "http", "https", "stream", "dns", "url",
                    "util", "zlib", "crypto", "cluster", "domain", "events", "vm",
                   "punycode", "readline", "string_decoder", "tls", "dgram"];
 
+var processDirectory = path.dirname(process.argv[1]);
+
 // Initialize basics
 var version = pkg.version;
 var __nodePath = paths.sys.node.clone();
@@ -109,22 +111,19 @@ cleandir = function(directory) {
     });
 }
 
-var processDirectory = path.dirname(process.argv[1]);
-var baseTempDirectory = os.tmpdir();
-baseTempDirectory += path.sep + "typeinclude-cache" + path.sep;
-if(process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid)
-	baseTempDirectory += (process.env.TYPESCRIPTINCLUDE_CACHENAMESPACE || process.getuid()) + path.sep;
-
 var $break = new Object();
-if(!("__typeinclude__" in global)) {
-    global.__typeinclude__ = {
-        "loadcache": {},
-        "modulecache": {},
-        "plugincache": {},
-        "classfuncs": [],
-        "nodepath": {},
-        "tsc": __nodePath.resolve("typescript" + path.sep + "bin" + path.sep + "tsc")
-    };
+var __ti_cache = {
+    "loadcache": {},
+    "modulecache": {},
+    "plugincache": {},
+    "classfuncs": [],
+    "nodepath": {}
+};
+
+try {
+  __ti_cache.tsc = __nodePath.resolve("typescript" + path.sep + "bin" + path.sep + "tsc");
+} catch(e) {
+  logger.warn("tsc not found, compiling disabled", e.stack);
 }
 
 var endsWithSlash = /\/$/;
@@ -133,8 +132,8 @@ function _ti(topDir, classPath) {
 
     if(endsWithSlash.test(topDir))
         topDir = topDir.substring(0, topDir.length-1);
-    if(topDir in global.__typeinclude__.modulecache)
-        return global.__typeinclude__.modulecache[topDir];
+    if(topDir in __ti_cache.modulecache)
+        return __ti_cache.modulecache[topDir];
 
     var instance = new TypeInclude(topDir);
     if(classPath)
@@ -150,7 +149,7 @@ function _ti(topDir, classPath) {
             instanceFunc[key] = val;
     }
 
-    return global.__typeinclude__.modulecache[topDir] = instanceFunc;
+    return __ti_cache.modulecache[topDir] = instanceFunc;
 }
 
 function addDotTS(script) {
@@ -168,6 +167,8 @@ function TypeInclude(moduledir) {
         logger.error("typeinclude requires the path to a folder with a valid package.json");
         throw e;
     }
+    var pkgPath = path.resolve(path.dirname(pkg));
+
     var verbose = {
         discovered: _.identity,
         preprocessing: _.identity,
@@ -177,7 +178,7 @@ function TypeInclude(moduledir) {
         error: _.identity
     };
     var nodePath = new paths(__nodePath);
-	scanPackage(moduledir, nodePath);
+	   scanPackage(moduledir, nodePath);
 
     var registerverbose = function(_verbose) {
         _.extend(verbose, _verbose);
@@ -188,7 +189,9 @@ function TypeInclude(moduledir) {
     if("typesource" in pkg)
         classPath.add(path.resolve(moduledir, pkg.typesource));
 
-    var tempDirectory = baseTempDirectory;
+    var tempDirectory = path.resolve(pkgPath, "compiled") + path.sep;
+    mkdirp.sync(tempDirectory);
+
     // TODO: Make global and local macros
     var macros = {};
     var typeregistermacro = function(name, pattern, callback, replaceWith) {
@@ -205,17 +208,15 @@ function TypeInclude(moduledir) {
         if(!dontResolve)
             script = classpath.resolve(script);
 
-        var shasum = crypto.createHash('sha512');
-        shasum.update(script);
-        var hashDigest = shasum.digest("hex");
-        var outputFile = tempDirectory + hashDigest.substring(0, 12) + path.sep;
-        outputFile += hashDigest.substring(12, 80) + path.sep;
-        outputFile += hashDigest.substring(80) + path.sep;
-        mkdirp.sync(outputFile, 0777);
+        var outputFile = path.resolve(tempDirectory, path.relative(pkgPath, script)) + path.sep;
+        if(outputFile.indexOf(pkgPath) !== 0)
+          throw new Error("Cannot include files from outside package path: `" + pkgPath+ "`");
+
+        mkdirp.sync(outputFile);
         if(!fs.existsSync(outputFile))
             throw new Error("Unable to create cache directory: " + outputFile);
         var outputFolder = outputFile;
-        outputFile += path.basename(script, '.ts');
+        outputFile += "index";
         var outputBase = outputFile;
 
         return [outputFolder,
@@ -494,7 +495,7 @@ function TypeInclude(moduledir) {
                 }
             };
 
-            var cmdLine = global.__typeinclude__.tsc + " --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
+            var cmdLine = __ti_cache.tsc + " --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
             if(strip)
                 cmdLine += "--removeComments ";
             cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
@@ -518,23 +519,25 @@ function TypeInclude(moduledir) {
 
             var waitFor = function() {};
             var tpath = typepath(script, undefined, true);
-            var scriptStat = fs.statSync(script);
-            try {
-                var outStat = fs.statSync(tpath[1]);
-                if(scriptStat.mtime > outStat.mtime)
-                    throw "Script modified since last compiled";
+            if(__ti_cache.tsc) {
+              var scriptStat = fs.statSync(script);
+              try {
+                  var outStat = fs.statSync(tpath[1]);
+                  if(scriptStat.mtime > outStat.mtime)
+                      throw "Script modified since last compiled";
 
-                var cVer = fs.readFileSync(tpath[4]);
-                if(cVer != version)
-                    throw "Compiled using V" + cVer + " of typeinclude, now V" + version;
-                verbose.compiled(script, classpath);
-            } catch(e) {
-                var state = [tpath, classpath, scriptStat];
-                try {
-                    waitFor = typecompile0(script, [tpath, classpath, scriptStat], complete, noRecursive);
-                } catch(e) {
-                    throw e;
-                }
+                  var cVer = fs.readFileSync(tpath[4]);
+                  if(cVer != version)
+                      throw "Compiled using V" + cVer + " of typeinclude, now V" + version;
+                  verbose.compiled(script, classpath);
+              } catch(e) {
+                  var state = [tpath, classpath, scriptStat];
+                  try {
+                      waitFor = typecompile0(script, [tpath, classpath, scriptStat], complete, noRecursive);
+                  } catch(e) {
+                      throw e;
+                  }
+              }
             }
 
             if(!complete)
@@ -609,8 +612,8 @@ function TypeInclude(moduledir) {
         }
 
         logger.gears("Resolved", script);
-        if(!ignoreCaches && script in global.__typeinclude__.loadcache)
-            return global.__typeinclude__.loadcache[script];
+        if(!ignoreCaches && script in __ti_cache.loadcache)
+            return __ti_cache.loadcache[script];
 
         var compiler = typecompile(script, classpath, undefined, true);
         compiler[1]();
@@ -618,7 +621,7 @@ function TypeInclude(moduledir) {
         logger.gears("Requiring", compiler[0]);
         var requireInstance = require(compiler[0]);
         if(!ignoreCaches)
-            global.__typeinclude__.loadcache[script] = requireInstance;
+            __ti_cache.loadcache[script] = requireInstance;
         return requireInstance;
     }
 
@@ -628,8 +631,8 @@ function TypeInclude(moduledir) {
         logger.gears("Loading Plugin", script, "from", classpath);
         script = classpath.resolve(script);
 
-        if(script in global.__typeinclude__.plugincache)
-            return global.__typeinclude__.plugincache[script];
+        if(script in __ti_cache.plugincache)
+            return __ti_cache.plugincache[script];
 
         var plugin = {
             name: path.basename(script, ".ts"),
@@ -651,7 +654,7 @@ function TypeInclude(moduledir) {
             }
         });
 
-        global.__typeinclude__.plugincache[script] = plugin;
+        __ti_cache.plugincache[script] = plugin;
         return plugin;
     }
 

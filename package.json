@@ -2,7 +2,7 @@
 	"name": "typeinclude",
 	"author": "NexusTools",
 	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"licenses": [
 		{
 			"type": "Apache License 2.0",
@@ -30,7 +30,6 @@
 		"type" : "git",
 		"url" : "https://github.com/NexusTools/node-typeinclude.git"
 	},
-	"preferGlobal" : true,
 	"main" : "index.js",
 	"scripts": {
 		"test": "mocha --bail --require ./test/support/env --reporter spec --timeout 40000 --globals __typeinclude__ --check-leaks test/",
@@ -49,13 +48,13 @@
 	"dependencies": {
     "cli-color": "~1.0.0",
 		"nulllogger": "~0.2.4",
-		"typescript" : "~1.4.1",
     "node-paths": "~0.1.9",
 		"lodash": "~3.8.0",
 		"mkdirp": "~0.5.0",
 		"sleep": "~2.0.0"
 	},
 	"devDependencies": {
+		"typescript" : "~1.4.1",
 		"istanbul": "~0.3.13",
 		"mocha": "~2.2.4"
 	}
