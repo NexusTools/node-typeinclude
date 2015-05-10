@@ -15,7 +15,7 @@ var logger;
 try {
     logger = require("nulllogger");
     logger = new logger("e:typeinclude");
-    
+
     if(!logger.gears || !logger.error)
         throw "Bad implementation";
 } catch(e) {
@@ -130,26 +130,26 @@ if(!("__typeinclude__" in global)) {
 var endsWithSlash = /\/$/;
 function _ti(topDir, classPath) {
     topDir = path.normalize(topDir);
-    
+
     if(endsWithSlash.test(topDir))
         topDir = topDir.substring(0, topDir.length-1);
     if(topDir in global.__typeinclude__.modulecache)
         return global.__typeinclude__.modulecache[topDir];
-    
+
     var instance = new TypeInclude(topDir);
     if(classPath)
         instance.addclasspath(classPath);
-    
+
     var instanceFunc = function() {
         return instance.include.apply(instance, arguments);
     }
-    
+
     for(var key in instance) {
         var val = instance[key];
         if(_.isFunction(val))
             instanceFunc[key] = val;
     }
-    
+
     return global.__typeinclude__.modulecache[topDir] = instanceFunc;
 }
 
@@ -178,16 +178,16 @@ function TypeInclude(moduledir) {
     };
     var nodePath = new paths(__nodePath);
 	scanPackage(moduledir, nodePath);
-    
+
     var registerverbose = function(_verbose) {
         _.extend(verbose, _verbose);
     }
-    
-    
+
+
     var classPath = new paths(addDotTS, processDirectory);
     if("typesource" in pkg)
         classPath.add(path.resolve(moduledir, pkg.typesource));
-    
+
     var tempDirectory = baseTempDirectory;
     // TODO: Make global and local macros
     var macros = {};
@@ -267,7 +267,7 @@ function TypeInclude(moduledir) {
             var macroProcessor = macros[p1];
             if(!macroProcessor)
                 throw new Error("Unhandled macro '@" + p1 + "' in" + script);
-            
+
             if(p2)
                 p2 = p2.substring(1);
             if(macroProcessor[0] && !macroProcessor[0].test(p2))
@@ -383,7 +383,7 @@ function TypeInclude(moduledir) {
             context.needRequire = true;
             return "var " + p1[0] + ":Function = require(" + JSON.stringify(p1[1]) + ")";
         }
-        
+
             context.needTypeinclude = true;
         try {
         	var modulePath = nodePath.resolve(p1[1] + path.sep + "package.json");
@@ -391,11 +391,11 @@ function TypeInclude(moduledir) {
 		    var main = package.main || "index.js";
 		    if(!endsWithJS.test(main))
 		    	main += ".js";
-		    
+
 		    modulePath = path.resolve(path.dirname(modulePath), main);
 		    if(!fs.existsSync(modulePath))
 		        throw new Error("Main missing `" + modulePath + "`");
-            
+
             return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(modulePath) + ")";
         } catch(e) {
             return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(p1[1]) + ")";
@@ -500,7 +500,7 @@ function TypeInclude(moduledir) {
             cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
             logger.gears("Running", cmdLine);
             child_process.exec(cmdLine);
-			
+
 			if(process.env.NO_HEAVY_LIFTING) {
 				waitFor();
 				waitFor = function() {}
@@ -654,7 +654,7 @@ function TypeInclude(moduledir) {
         global.__typeinclude__.plugincache[script] = plugin;
         return plugin;
     }
-    
+
     // Export methods
     this.path = typepath;
     this.include = typeinclude;
@@ -689,10 +689,10 @@ function TypeInclude(moduledir) {
             try {
                 return require(cachedModulePath);
             } catch(e) {}
-        
+
         var modulePath = nodePath.resolve(module + path.sep + "package.json");
         var package = require(modulePath);
-        
+
         return require(path.dirname(modulePath));
     }
 };

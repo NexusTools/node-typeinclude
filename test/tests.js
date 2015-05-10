@@ -81,7 +81,7 @@ describe('api', function() {
             assert.equal(instance.method(), "Fat");
         });
         it('@plugin', function(){
-            typeinclude.addclasspath([[__dirname + path.sep + "all"]]);
+            typeinclude.addclasspath(__dirname + path.sep + "all");
             var All = typeinclude("All");
             assert.equal((new All()).doBelong(), "All Your Base Are Belong To Us");
         });
@@ -106,7 +106,7 @@ describe('api', function() {
         });
         var bigtest;
         it('compile bigtest', function(){
-            typeinclude.addclasspath([[__dirname + path.sep + "bigtest"]]);
+            typeinclude.addclasspath(__dirname + path.sep + "bigtest");
             bigtest = typeinclude("BigTest");
         });
         it('run bigtest', function(){
@@ -130,7 +130,7 @@ describe('package.json test(main|source)', function() {
     it('test instance', function(){
         assert.equal(instance.yellow(), "yellowish");
     });
-    
+
 });
 
 describe('coverage', function() {

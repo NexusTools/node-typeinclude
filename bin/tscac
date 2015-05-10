@@ -2,12 +2,13 @@
 var startNow = Date.now();
 var path = require("path");
 var cli = require("cli-color");
+var fs = require("fs");
+
 var typeinclude;
-try {
-    typeinclude = require("/usr/local/lib/node_modules/typeinclude")(process.cwd());
-} catch(e) {
-    typeinclude = require("typeinclude")(process.cwd());
-}
+if(!process.env.TYPEINCLUDE_DEVMODE)
+	typeinclude = require("../")(process.cwd());
+else
+	typeinclude = require("typeinclude")(process.cwd());
 
 var logger;
 try {
@@ -32,7 +33,8 @@ function writeState() {
     states.forEach(function(state) {
         process.stdout.write(colors[state]("•"));
     });
-    process.stdout.write(cli.bol());
+    process.stdout.write("\n\n");
+    process.stdout.write(cli.move.up(2));
 }
 function updateState(file, state) {
     var pos = entries.indexOf(file);
