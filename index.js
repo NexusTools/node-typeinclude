@@ -169,7 +169,7 @@ function TypeInclude(moduledir) {
         logger.error("typeinclude requires the path to a folder with a valid package.json");
         throw e;
     }
-    var pkgPath = path.resolve(path.dirname(pkg));
+    logger.gears("Initializing TypeInclude", moduledir);
 
     var verbose = {
         discovered: _.identity,
@@ -191,7 +191,7 @@ function TypeInclude(moduledir) {
     if("typesource" in pkg)
         classPath.add(path.resolve(moduledir, pkg.typesource));
 
-    var tempDirectory = path.resolve(pkgPath, "compiled") + path.sep;
+    var tempDirectory = path.resolve(moduledir, "compiled") + path.sep;
     mkdirp.sync(tempDirectory);
 
     // TODO: Make global and local macros
@@ -210,9 +210,10 @@ function TypeInclude(moduledir) {
         if(!dontResolve)
             script = classpath.resolve(script);
 
-        var outputFile = path.resolve(tempDirectory, path.relative(pkgPath, script)) + path.sep;
-        if(outputFile.indexOf(pkgPath) !== 0)
-          throw new Error("Cannot include files from outside package path: `" + pkgPath+ "`");
+		logger.gears("Determining paths", script, moduledir);
+        var outputFile = path.resolve(tempDirectory, path.relative(moduledir, script)) + path.sep;
+        if(outputFile.indexOf(moduledir) !== 0)
+          throw new Error("Cannot include files from outside package path: `" + moduledir + "`");
 
         mkdirp.sync(outputFile);
         if(!fs.existsSync(outputFile))
