@@ -111,6 +111,8 @@ cleandir = function(directory) {
     });
 }
 
+var typeincludePath = JSON.stringify(process.env.TYPEINCLUDE_DEVMODE ? __filename : "typeinclude");
+
 var $break = new Object();
 var __ti_cache = {
     "loadcache": {},
@@ -256,7 +258,11 @@ function TypeInclude(moduledir) {
         var context = {
             includes: [],
             references: [],
+            moduledir: moduledir,
             classpath: classpath,
+            outputFile: outputFile,
+            outputFolder: outputFolder,
+            outputSource: outputSource,
             disallowAutoCompile: false,
             needTypeinclude: false,
             needRequire: false,
@@ -283,10 +289,13 @@ function TypeInclude(moduledir) {
         });
 
         if(context.needTypeinclude)
-            content = "var _typeinclude = require(" + JSON.stringify(__filename) + ")(" + JSON.stringify(moduledir) + ");\n" + content;
+            content = "var _typeinclude = require(" + typeincludePath + ")(__moduledir);\n" + content;
         if(context.needRequire)
             content = "declare var require:Function;\n" + content;
-        content = "var __classpath = " + JSON.stringify(classpath._paths) + ";\nvar __filename = " + JSON.stringify(script) + "\nvar __dirname = " + JSON.stringify(path.dirname(script)) + ";\n" + content;
+
+        var relativeFilename = path.relative(moduledir, script);
+        content = "var __real_filename = __filename;\nvar __path_resolve = require(\"path\").resolve;\nvar __moduledir = __path_resolve(__filename, " + JSON.stringify(path.relative(outputSource, moduledir)) + ");\nvar __filename = __path_resolve(__moduledir, " + JSON.stringify(relativeFilename) + ")\nvar __dirname = __path_resolve(__moduledir, " + JSON.stringify(path.dirname(relativeFilename)) + ");\n" + content;
+
         fs.writeFileSync(outputSource, content);
         if(!fs.existsSync(outputSource))
             throw new Error("Unable to write outputSource: " + outputSource);
@@ -322,7 +331,7 @@ function TypeInclude(moduledir) {
                 context.includes.push(inc);
         });
 
-        return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude(\"" + p1[1] + "\");";
+        return "/// <reference path=" + JSON.stringify(path.relative(p1[1], preprocess[0])) + " />\nvar " + p1[0] + " = _typeinclude(__path_resolve(__moduledir, " + JSON.stringify(path.relative(context.moduledir, p1[1])) + "));";
     });
 
     typeregistermacro("reference",
@@ -338,7 +347,7 @@ function TypeInclude(moduledir) {
                 context.references.push(ref);
         });
 
-        return "/// <reference path=\"" + preprocess[0] + "\" />";
+        return "/// <reference path=" + JSON.stringify(path.relative(p1, preprocess[0])) + " />";
     });
 
     typeregistermacro("plugin",
@@ -357,7 +366,7 @@ function TypeInclude(moduledir) {
                 context.references.push(ref);
         });
 
-        return "/// <reference path=\"" + preprocess[0] + "\" />\nvar " + p1[0] + " = _typeinclude.plugin(\"" + p1[1] + "\");";
+        return "/// <reference path=" + JSON.stringify(path.relative(p1[1], preprocess[0])) + " />\nvar " + p1[0] + " = _typeinclude.plugin(__path_resolve(__moduledir, " + JSON.stringify(path.relative(context.moduledir, p1[1])) + "));";
     });
 
     typeregistermacro("pluginfor",
@@ -373,7 +382,7 @@ function TypeInclude(moduledir) {
                 context.references.push(ref);
         });
 
-        return "/// <reference path=\"" + preprocess[0] + "\" />";
+        return "/// <reference path=" + JSON.stringify(path.relative(p1[1], preprocess[0])) + " />";
     });
 
     typeregistermacro("nodereq",
@@ -386,7 +395,7 @@ function TypeInclude(moduledir) {
         }
 
             context.needTypeinclude = true;
-        try {
+        /*try {
         	var modulePath = nodePath.resolve(p1[1] + path.sep + "package.json");
 		    var package = require(modulePath);
 		    var main = package.main || "index.js";
@@ -398,9 +407,9 @@ function TypeInclude(moduledir) {
 		        throw new Error("Main missing `" + modulePath + "`");
 
             return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(modulePath) + ")";
-        } catch(e) {
+        } catch(e) {*/
             return "var " + p1[0] + ":Function = _typeinclude.require(" + JSON.stringify(p1[1]) + ")";
-        }
+        //}
     });
 
     typeregistermacro("noautocompile", undefined, undefined,
