@@ -3,7 +3,6 @@ if(require.main === module)
 var path = require('path');
 var pkg = require(path.resolve(__dirname, 'package.json'));
 
-var usleep = require("sleep").usleep;
 var child_process = require("child_process");
 var crypto = require('crypto');
 var mkdirp = require("mkdirp");
@@ -462,64 +461,41 @@ function TypeInclude(moduledir) {
         verbose.compiling(outputFile, classpath);
 
         // TODO: Start compiling references
-        var waitFor;
-        if(complete) {
-            waitFor = function() {
-                throw new Error("complete callback passed, synchronous usage disabled");
-            };
-            throw new Error("asynchronous not implemented yet");
-        } else {
-            var otherWaits = [];
+        if(complete)
+            throw new Error("Callbacks not implemented yet.");
+        else {
             if(!noRecursive) {
                 includes.forEach(function(include) {
-                    var compiler = typecompile(include, classpath, undefined, true, true);
-                    otherWaits.push(compiler[1]);
+                    typecompile(include, classpath, undefined, true, true);
                 });
             }
-            waitFor = function() {
-                // Wait for included stuff to compile
-                otherWaits.forEach(function(otherWait) {
-                    otherWait();
-                });
-
-                // Compile myself now
-                while (!fs.existsSync(outputFin)) {
-                    usleep(100000); // 100ms
-                }
-                verbose.compiled(outputFile, classpath);
-
-                try {
-                    if(fs.statSync(outputFile).size < 1)
-                        throw new Error("Generated empty file");
-                    fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
-                    fs.writeFileSync(outputVer, version);
-                } catch(e) {
-                    try {
-                        fs.unlinkSync(outputFile);
-                    } catch(e) {}
-
-                    logger.error("Compile Error:", e);
-                    if(!fs.existsSync(outputLog))
-                        throw new Error("No output log created: " + outputLog);
-                    throw new Error("Cannot compile `" + script + "`\n" + fs.readFileSync(outputLog));
-                }
-            };
 
             var cmdLine = __ti_cache.tsc + " --target \"" + target + "\" --sourcemap --module \"commonjs\" ";
             if(strip)
                 cmdLine += "--removeComments ";
             cmdLine += "--out '" + outputFile + "' '" + outputSource + "' 2>&1 > '" + outputLog + "' || true; touch '" + outputFin + "'";
             logger.gears("Running", cmdLine);
-            child_process.exec(cmdLine);
+            child_process.execSync(cmdLine);
 
-			if(process.env.NO_HEAVY_LIFTING) {
-				waitFor();
-				waitFor = function() {}
-			}
+            try {
+                if(fs.statSync(outputFile).size < 1)
+                    throw new Error("Generated empty file");
+                fs.utimesSync(outputFile, scriptStat.atime, scriptStat.mtime);
+                fs.writeFileSync(outputVer, version);
+            } catch(e) {
+                try {
+                    fs.unlinkSync(outputFile);
+                } catch(e) {}
+
+                logger.error("Compile Error:", e);
+                if(!fs.existsSync(outputLog))
+                    throw new Error("No output log created: " + outputLog);
+                throw new Error("Cannot compile `" + script + "`\n" + fs.readFileSync(outputLog));
+            }
         }
-
-        return waitFor;
-    }
+        
+        return function() {}
+    };
 
     var typecompile = function(script, classpath, complete, dontResolve, noRecursive) {
         try {
