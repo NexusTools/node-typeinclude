@@ -143,15 +143,6 @@ describe('coverage', function() {
                 throw e;
         }
     });
-    it('compile error', function(){
-        try {
-            typeinclude("error");
-            throw new Error("Didn't fail");
-        } catch(e) {
-            if(!/Cannot compile /.test(e.message))
-                throw e;
-        }
-    });
     it('cannot resolve error', function(){
         try {
             typeinclude("fake");

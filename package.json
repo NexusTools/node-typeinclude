@@ -1,61 +1,60 @@
 {
-	"name": "typeinclude",
-	"author": "NexusTools",
-	"homepage": "https://www.nexustools.net/projects#typeinclude",
-	"version": "0.6.3",
-	"licenses": [
-		{
-			"type": "Apache License 2.0",
-			"url": "https://github.com/NexusTools/node-typeinclude/blob/master/LICENSE.md"
-		}
-	],
-	"description": "node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something. And provides a few extensions to the TypeScript language via a pre-processor.",
-	"keywords": [
-		"typescript",
-		"NexusTools",
-		"integration",
-		"nosejs",
-		"compiler",
-		"language",
-		"javascript",
-    "macros",
-    "resolve",
-    "loader",
-    "class"
-	],
-	"bugs": {
-		"url" : "https://github.com/NexusTools/node-typeinclude/issues"
-	},
-	"repository": {
-		"type" : "git",
-		"url" : "https://github.com/NexusTools/node-typeinclude.git"
-	},
-	"main" : "index.js",
-	"scripts": {
-		"test": "mocha --bail --require ./test/support/env --reporter spec --timeout 40000 --globals __typeinclude__ --check-leaks test/",
-		"test-coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --timeout 40000 --globals __typeinclude__ --check-leaks --require test/support/env --bail --reporter spec test/",
-		"test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 40000 --globals __typeinclude__ --check-leaks --require test/support/env --reporter spec test/"
-	},
-	"bin" : {
-		"tsc+" : "./bin/tsc+",
-		"tscac" : "./bin/tscac",
-		"nodets" : "./bin/nodets"
-	},
-	"engines" : {
-    "node": ">=0.10.16",
-    "npm": ">=1.3.8"
-	},
-	"dependencies": {
-    "cli-color": "~1.0.0",
-		"nulllogger": "~0.2.4",
-    "node-paths": "~0.1.9",
-		"lodash": "~3.8.0",
-		"mkdirp": "~0.5.0",
-		"sleep": "~2.0.0"
-	},
-	"devDependencies": {
-		"typescript" : "~1.4.1",
-		"istanbul": "~0.3.13",
-		"mocha": "~2.2.4"
-	}
+    "name": "typeinclude",
+    "author": "NexusTools",
+    "homepage": "https://www.nexustools.net/projects#typeinclude",
+    "version": "0.6.4",
+    "licenses": [
+        {
+            "type": "Apache License 2.0",
+            "url": "https://github.com/NexusTools/node-typeinclude/blob/master/LICENSE.md"
+        }
+    ],
+    "description": "node-typeinclude makes it easy to include typescript files into your nodejs project at runtime, without the need to recompile every time you change something. And provides a few extensions to the TypeScript language via a pre-processor.",
+    "keywords": [
+        "typescript",
+        "NexusTools",
+        "integration",
+        "nosejs",
+        "compiler",
+        "language",
+        "javascript",
+        "macros",
+        "resolve",
+        "loader",
+        "class"
+    ],
+    "bugs": {
+        "url": "https://github.com/NexusTools/node-typeinclude/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NexusTools/node-typeinclude.git"
+    },
+    "main": "index.js",
+    "scripts": {
+        "test": "mocha --bail --require ./test/support/env --reporter spec --timeout 40000 --globals __typeinclude__ --check-leaks test/",
+        "test-coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --timeout 40000 --globals __typeinclude__ --check-leaks --require test/support/env --bail --reporter spec test/",
+        "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 40000 --globals __typeinclude__ --check-leaks --require test/support/env --reporter spec test/"
+    },
+    "bin": {
+        "tsc+": "./bin/tsc+",
+        "tscac": "./bin/tscac",
+        "nodets": "./bin/nodets"
+    },
+    "engines": {
+        "node": ">=0.10.16",
+        "npm": ">=1.3.8"
+    },
+    "dependencies": {
+        "nulllogger": "^0.2.4",
+        "node-paths": "^0.2.0",
+        "lodash": "^4.13.1",
+        "mkdirp": "^0.5.1",
+        "sleep": "^3.0.1"
+    },
+    "devDependencies": {
+        "typescript": "^1.8.10",
+        "istanbul": "^0.4.3",
+        "mocha": "^2.5.3"
+    }
 }
